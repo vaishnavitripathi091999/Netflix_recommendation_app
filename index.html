@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Show Affinity Analysis</title>
+<style>
+:root{
+  --red:#D22630; --red-deep:#8E1A21; --black:#000;
+  --s0:#0A0A0A; --s1:#141414; --s2:#1C1C1C; --s3:#262626; --s4:#333;
+  --tx:#F5F5F5; --tx2:#B3B3B3; --tx3:#7A7A7A;
+  --accent:#00C2A8;
+  --ff:'Helvetica Neue',Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--black);color:var(--tx);font-family:var(--ff);-webkit-font-smoothing:antialiased;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding:0 16px}
+
+/* ---------- header ---------- */
+header{background:linear-gradient(180deg,#000 0%,#0d0d0d 100%);border-bottom:1px solid var(--s3);position:sticky;top:0;z-index:50}
+.hd{display:flex;align-items:center;gap:16px;padding:14px 0;flex-wrap:wrap}
+.logo{height:34px;width:auto;display:block;flex:none}
+.hd-t{flex:1;min-width:180px}
+.hd-t h1{margin:0;font-size:19px;font-weight:700;letter-spacing:-.2px}
+.hd-t p{margin:2px 0 0;font-size:12px;color:var(--tx3);letter-spacing:.06em;text-transform:uppercase}
+nav{display:flex;gap:4px;background:var(--s1);padding:4px;border-radius:999px;border:1px solid var(--s3)}
+nav button{font:inherit;font-size:13px;font-weight:600;color:var(--tx2);background:none;border:0;padding:8px 18px;border-radius:999px;cursor:pointer;transition:.15s;white-space:nowrap}
+nav button:hover{color:var(--tx)}
+nav button[aria-selected="true"]{background:var(--red);color:#fff}
+
+/* ---------- generic ---------- */
+.page{display:none;padding:28px 0 64px}
+.page.on{display:block}
+.caption{font-size:13px;color:var(--tx2);max-width:78ch;margin:0 0 22px}
+.card{background:var(--s1);border:1px solid var(--s3);border-radius:10px;padding:20px;margin-bottom:20px}
+.card>h2{margin:0 0 4px;font-size:16px;font-weight:700;letter-spacing:-.1px}
+.card>h2+.sub{margin:0 0 18px;font-size:12.5px;color:var(--tx3)}
+.eyebrow{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--red);margin-bottom:8px}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+
+/* ---------- KPI ---------- */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px}
+.kpi{background:var(--s1);border:1px solid var(--s3);border-radius:10px;padding:14px 16px;border-left:3px solid var(--red)}
+.kpi .v{font-size:25px;font-weight:700;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
+.kpi .l{font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:.08em;margin-top:2px}
+
+/* ---------- recommender ---------- */
+.pickrow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px}
+.chip{font:inherit;font-size:13px;font-weight:600;background:var(--s2);color:var(--tx2);border:1px solid var(--s4);
+      padding:9px 15px;border-radius:6px;cursor:pointer;transition:.15s}
+.chip:hover{border-color:var(--red);color:var(--tx)}
+.chip[aria-pressed="true"]{background:var(--red);border-color:var(--red);color:#fff}
+.recgrid{display:grid;grid-template-columns:320px minmax(0,1fr);gap:22px;align-items:start}
+.recgrid>*,.grid2>*{min-width:0}
+.seed{background:linear-gradient(145deg,var(--red-deep),#6d0409);border-radius:10px;padding:20px;border:1px solid #7a0a10}
+.seed .k{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;opacity:.75}
+.seed .n{font-size:26px;font-weight:700;line-height:1.15;margin:6px 0 16px;letter-spacing:-.4px}
+.seed dl{margin:0;display:grid;grid-template-columns:1fr auto;gap:7px 10px;font-size:12.5px}
+.seed dt{opacity:.8}
+.seed dd{margin:0;text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+.rec{display:flex;align-items:center;gap:14px;padding:12px 14px;background:var(--s2);border:1px solid var(--s3);
+     border-radius:8px;margin-bottom:9px;transition:.15s}
+.rec:hover{border-color:var(--s4);transform:translateX(2px)}
+.rec .rank{width:26px;font-size:17px;font-weight:700;color:var(--tx3);font-variant-numeric:tabular-nums;flex:none}
+.rec.top .rank{color:var(--red)}
+.rec .body{flex:1;min-width:0}
+.rec .nm{font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis}
+.rec .why{font-size:11.5px;color:var(--tx3);margin-top:1px}
+.bar{width:130px;height:7px;background:var(--s4);border-radius:4px;overflow:hidden;flex:none;position:relative}
+.bar i{position:absolute;top:0;bottom:0;left:50%;display:block;border-radius:4px}
+.rec .val{width:62px;text-align:right;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;flex:none}
+.verdict{font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px;flex:none;letter-spacing:.04em}
+.v-strong{background:rgba(210,38,48,.18);color:#FF6B73}
+.v-none{background:var(--s3);color:var(--tx3)}
+
+/* ---------- heatmap ---------- */
+.hmwrap{overflow-x:auto;padding-bottom:6px}
+table.hm{border-collapse:separate;border-spacing:3px;font-size:12px}
+table.hm th{font-weight:600;color:var(--tx2);font-size:11.5px;padding:4px 8px;white-space:nowrap}
+table.hm th.rowh{text-align:right;max-width:170px}
+table.hm th.colh{height:118px;vertical-align:bottom;padding-bottom:8px}
+table.hm th.colh div{writing-mode:vertical-rl;transform:rotate(180deg);text-align:left}
+table.hm td{width:58px;height:42px;text-align:center;border-radius:4px;font-variant-numeric:tabular-nums;
+  font-weight:600;cursor:default;transition:.12s;font-size:11.5px}
+table.hm td:hover{outline:2px solid #fff;outline-offset:-2px}
+table.hm td.diag{background:var(--s4)!important;color:var(--tx3)!important}
+table.hm tr.hi th.rowh,table.hm td.hi{color:#fff}
+.legend{display:flex;align-items:center;gap:12px;margin-top:16px;font-size:11.5px;color:var(--tx3)}
+.scale{width:220px;height:11px;border-radius:3px;
+  background:linear-gradient(90deg,#00C2A8,#0e6b62,#2b2b2b,#8d1118,#D22630)}
+
+/* ---------- tables ---------- */
+table.dt{width:100%;border-collapse:collapse;font-size:12.5px}
+table.dt th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--tx3);
+  padding:8px 10px;border-bottom:1px solid var(--s4);font-weight:700;white-space:nowrap}
+table.dt td{padding:8px 10px;border-bottom:1px solid var(--s2);font-variant-numeric:tabular-nums;white-space:nowrap}
+table.dt tbody tr:hover{background:var(--s2)}
+table.dt td.num,table.dt th.num{text-align:right}
+.tscroll{overflow-x:auto}
+
+/* ---------- methodology ---------- */
+.steps{counter-reset:s}
+.step{position:relative;padding-left:56px;margin-bottom:26px}
+.step::before{counter-increment:s;content:counter(s);position:absolute;left:0;top:0;width:36px;height:36px;
+  border-radius:50%;background:var(--red);color:#fff;display:grid;place-items:center;font-weight:700;font-size:16px}
+.step::after{content:"";position:absolute;left:17.5px;top:44px;bottom:-26px;width:1px;background:var(--s4)}
+.step:last-child::after{display:none}
+.step h3{margin:6px 0 6px;font-size:16px;font-weight:700}
+.step p{margin:0 0 12px;font-size:13.5px;color:var(--tx2);max-width:80ch}
+.formula{background:#0d0d0d;border:1px solid var(--s3);border-left:3px solid var(--accent);border-radius:6px;
+  padding:11px 14px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;
+  color:var(--accent);margin:10px 0;overflow-x:auto;white-space:pre}
+.note{font-size:12px;color:var(--tx3);border-left:2px solid var(--s4);padding-left:12px;margin:10px 0}
+.pill{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;
+  background:var(--s3);color:var(--tx2);margin:0 6px 6px 0}
+.pill.red{background:rgba(210,38,48,.15);color:#FF6B73}
+.pill.tl{background:rgba(0,194,168,.13);color:var(--accent)}
+.xlcap{font-size:11px;color:var(--tx3);margin-top:8px;font-style:italic}
+.xlbar{display:flex;align-items:center;gap:7px;background:var(--s3);border-radius:6px 6px 0 0;padding:6px 10px;
+  font-size:11px;color:var(--tx2);border:1px solid var(--s4);border-bottom:0}
+.xldot{width:9px;height:9px;border-radius:50%;background:#1D6F42;flex:none}
+.xlbox{border:1px solid var(--s4);border-radius:0 0 6px 6px;padding:2px;background:#0d0d0d}
+svg.chart{display:block;width:100%;height:auto}
+.wordmark{font-family:var(--ff);font-size:25px;font-weight:700;color:var(--red);
+  letter-spacing:-.6px;line-height:1;flex:none;padding-right:2px;-webkit-font-smoothing:antialiased}
+footer{border-top:1px solid var(--s3);padding:22px 0;font-size:11.5px;color:var(--tx3)}
+@media(max-width:900px){
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .recgrid,.grid2{grid-template-columns:1fr}
+  .bar{width:52px}
+  .rec{gap:9px;padding:10px}
+  .rec .val{width:52px;font-size:12px}
+  .rec .rank{width:18px;font-size:14px}
+  .verdict{font-size:9.5px;padding:3px 5px}
+  .seed .n{font-size:22px}
+  .wordmark{font-size:20px}
+  nav{width:100%}
+  nav button{flex:1;padding:8px 10px}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap hd">
+    <span class="wordmark">Netflix</span>
+    <div class="hd-t">
+      <h1>Show Affinity &amp; Recommendation Engine</h1>
+      <p>Subscriber watch-time correlation study</p>
+    </div>
+    <nav role="tablist">
+      <button role="tab" aria-selected="true" data-page="p1">Recommender</button>
+      <button role="tab" aria-selected="false" data-page="p2">How it was built</button>
+    </nav>
+  </div>
+</header>
+
+<!-- ============ PAGE 1 ============ -->
+<main class="wrap">
+<section id="p1" class="page on">
+  <p class="caption"><strong>Method in plain terms:</strong> every subscriber's total watch time is totalled per show
+  (episodes watched × episode length), giving one row per subscriber and one column per show. For each pair of shows we
+  measure how closely those two columns move together across all subscribers — Excel's <span class="mono">CORREL</span>,
+  the Pearson correlation. A value near <strong>+1</strong> means people who binge one also binge the other, so it is a
+  good recommendation. Near <strong>0</strong> means watching one tells us nothing about the other.</p>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="card">
+    <span class="eyebrow">Step 1 — pick a show</span>
+    <h2>Which show is the viewer watching?</h2>
+    <p class="sub">Select a title to rank all other shows by how strongly their watch time moves with it.</p>
+    <div class="pickrow" id="picker"></div>
+    <div class="recgrid">
+      <div><div class="seed" id="seed"></div>
+        <div class="card" style="margin:14px 0 0;background:var(--s2)" id="seedExtra"></div></div>
+      <div>
+        <div id="recs"></div>
+        <p class="xlcap" id="recfoot"></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <span class="eyebrow">Step 2 — the full picture</span>
+    <h2>Correlation matrix — all 9 titles</h2>
+    <p class="sub">Each cell is the Pearson correlation of total watch time between the row show and the column show,
+      across <span id="nsub2"></span> subscribers. Click a row label to load that show into the recommender.</p>
+    <div class="hmwrap"><table class="hm" id="heat"></table></div>
+    <div class="legend">
+      <span>−1.0 &nbsp;inverse</span><span class="scale"></span><span>+1.0 &nbsp;moves together</span>
+      <span style="margin-left:auto">Hover a cell for the exact value</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <span class="eyebrow">Context</span>
+    <h2>Watch-time profile per show</h2>
+    <p class="sub">Average total minutes per subscriber, derived from the same cleaned dataset.</p>
+    <div class="tscroll"><table class="dt" id="descT"></table></div>
+  </div>
+</section>
+
+<!-- ============ PAGE 2 ============ -->
+<section id="p2" class="page">
+  <p class="caption"><strong>The Excel workflow, reproduced.</strong> This page documents how the numbers on the
+  recommender page were produced — the same five steps carried out in the workbook: clean the raw extract, pivot it into
+  a subscriber × show matrix, run <span class="mono">CORREL</span> across every pair, plot the pairs that matter, and
+  summarise. Every figure shown here is recomputed live from the raw file, so the page and the workbook agree.</p>
+
+  <div class="card">
+  <div class="steps">
+
+    <div class="step">
+      <h3>Cleaning the raw extract</h3>
+      <p>The raw sheet arrives as one row per subscriber-show pair with four columns: Subscriber ID, Show Name,
+      Episodes Watched and Episode Length (m). Rows missing any of the four are dropped, because a blank breaks both the
+      product and the pivot. A fifth calculated column is then added.</p>
+      <div class="formula">Total Watch Time  =  [Episodes Watched] * [Episode Length (m)]</div>
+      <div id="cleanPills"></div>
+      <div class="xlbar"><span class="xldot"></span><span>Raw data — after cleaning &amp; calculated column</span></div>
+      <div class="xlbox tscroll"><table class="dt" id="rawT"></table></div>
+      <p class="xlcap">First rows of the cleaned sheet, rebuilt from <span class="mono">Netflix Exercise - Raw Data.xlsx</span>.</p>
+    </div>
+
+    <div class="step">
+      <h3>Pivoting into a subscriber × show matrix</h3>
+      <p>Correlation needs two equal-length lists of numbers, so the long table is reshaped: <em>Subscriber ID</em> to
+      Rows, <em>Show Name</em> to Columns, <em>Sum of Total Watch Time</em> to Values. The result is one row per
+      subscriber and one column per show — every column is now a variable the correlation can consume.</p>
+      <div class="xlbar"><span class="xldot"></span><span>Pivot table — Sum of Total Watch Time</span></div>
+      <div class="xlbox tscroll"><table class="dt" id="pivT"></table></div>
+      <p class="xlcap">First 12 of <span id="nsub3"></span> subscriber rows. Values are minutes.</p>
+    </div>
+
+    <div class="step">
+      <h3>Correlating every pair with CORREL</h3>
+      <p>With the pivot laid out as a grid, each pair of columns is fed to Excel's <span class="mono">CORREL</span>,
+      which returns the Pearson coefficient. Copying the formula across a square grid of show names produces the
+      triangular correlation table in the workbook.</p>
+      <div class="formula">=CORREL('Recommendation data'!C$2:C$2001, 'Recommendation data'!G$2:G$2001)</div>
+      <p style="font-size:13px;color:var(--tx2)">Reading the output: values above about <strong>0.8</strong> are the
+      strong pairs worth recommending on; everything between roughly <strong>−0.05 and +0.05</strong> is statistical
+      noise and means the two shows have no relationship at all.</p>
+      <div class="grid2" style="margin-top:14px">
+        <div>
+          <div class="xlbar"><span class="xldot"></span><span>Strong pairs found (r &gt; 0.8)</span></div>
+          <div class="xlbox tscroll"><table class="dt" id="strongT"></table></div>
+        </div>
+        <div>
+          <div class="xlbar"><span class="xldot"></span><span>Weakest pairs (no relationship)</span></div>
+          <div class="xlbox tscroll"><table class="dt" id="weakT"></table></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <h3>Mapping the scatter plots</h3>
+      <p>A coefficient on its own can mislead, so each headline pair is plotted as an XY scatter — one dot per
+      subscriber, their watch time for show A on the x-axis and show B on the y-axis. These are the two charts held in
+      the completed workbook, redrawn here from the same columns.</p>
+      <div class="grid2">
+        <div>
+          <div class="xlbar"><span class="xldot"></span><span>Chart 1 — Dark and Stranger Things</span></div>
+          <div class="xlbox"><svg class="chart" id="sc1" viewBox="0 0 520 400"></svg></div>
+          <p class="xlcap">A clear upward band: the pair moves together, so the recommendation holds.</p>
+        </div>
+        <div>
+          <div class="xlbar"><span class="xldot"></span><span>Chart 2 — You and Big Bang Theory</span></div>
+          <div class="xlbox"><svg class="chart" id="sc2" viewBox="0 0 520 400"></svg></div>
+          <p class="xlcap">A shapeless cloud: no relationship, so neither title predicts the other.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <h3>Summarising with a descriptive table</h3>
+      <p>Finally the pivot is re-cut as an average per show, sorted descending. This separates the correlation signal
+      from sheer popularity — a show can be heavily watched and still correlate with nothing.</p>
+      <div class="xlbar"><span class="xldot"></span><span>Descriptive table — Average of Total Watch Time</span></div>
+      <div class="xlbox tscroll"><table class="dt" id="descT2"></table></div>
+      <p class="xlcap">Grand total average across all shows: <span class="mono" id="grandAvg"></span> minutes.</p>
+    </div>
+
+  </div>
+  </div>
+
+  <div class="card">
+    <span class="eyebrow">Read-out</span>
+    <h2>What the analysis concluded</h2>
+    <div id="conclusion" style="font-size:13.5px;color:var(--tx2)"></div>
+  </div>
+</section>
+</main>
+
+<footer><div class="wrap">Built from <span class="mono">Netflix Exercise - Raw Data.xlsx</span> ·
+  <span id="footN"></span> · Independent analysis · Not affiliated with or endorsed by Netflix, Inc.</div></footer>
+<script>
+const D = {"shows": ["Big Bang Theory", "Dahmer", "Dark", "Dexter", "It's Okay To Not Be Okay", "Queen Of Tears", "Stranger Things", "Umbrella Academy", "You"], "corr": [[1.0, -0.009482, -0.03397, -0.000132, -0.033736, -0.040397, -0.037823, -0.033373, -0.005369], [-0.009482, 1.0, -0.011686, 0.821099, -0.003132, 0.00792, -0.001239, -0.008429, 0.949817], [-0.03397, -0.011686, 1.0, 0.001058, 0.000975, 0.004661, 0.83672, 0.959428, -0.007002], [-0.000132, 0.821099, 0.001058, 1.0, 0.001616, 0.015922, 0.016999, 0.004217, 0.9216], [-0.033736, -0.003132, 0.000975, 0.001616, 1.0, 0.865645, -0.005194, 0.001407, -0.006949], [-0.040397, 0.00792, 0.004661, 0.015922, 0.865645, 1.0, -0.015124, 0.005408, 0.005461], [-0.037823, -0.001239, 0.83672, 0.016999, -0.005194, -0.015124, 1.0, 0.8469, 0.004655], [-0.033373, -0.008429, 0.959428, 0.004217, 0.001407, 0.005408, 0.8469, 1.0, -0.003938], [-0.005369, 0.949817, -0.007002, 0.9216, -0.006949, 0.005461, 0.004655, -0.003938, 1.0]], "desc": [{"show": "Big Bang Theory", "avg": 3024.73, "median": 3033.23, "min": 603.79, "max": 5477.36, "sd": 798.61, "total": 6049453.78, "viewers": 2000, "avgEp": 131.51, "epLen": 23}, {"show": "Dahmer", "avg": 3015.85, "median": 3013.44, "min": 47.21, "max": 6033.87, "sd": 991.95, "total": 6031692.07, "viewers": 2000, "avgEp": 60.32, "epLen": 50}, {"show": "You", "avg": 3015.59, "median": 3001.44, "min": 47.38, "max": 6225.17, "sd": 1016.25, "total": 6031189.53, "viewers": 2000, "avgEp": 54.83, "epLen": 55}, {"show": "Dexter", "avg": 2999.87, "median": 3033.11, "min": 19.92, "max": 6425.76, "sd": 1011.88, "total": 5999738.1, "viewers": 2000, "avgEp": 54.54, "epLen": 55}, {"show": "Stranger Things", "avg": 2037.09, "median": 2002.93, "min": 5.04, "max": 5727.24, "sd": 989.01, "total": 4074173.35, "viewers": 2000, "avgEp": 30.86, "epLen": 66}, {"show": "Dark", "avg": 2036.83, "median": 2037.53, "min": 0.03, "max": 5384.52, "sd": 980.34, "total": 4073664.45, "viewers": 2000, "avgEp": 31.34, "epLen": 65}, {"show": "Umbrella Academy", "avg": 2035.32, "median": 2024.99, "min": 5.03, "max": 5528.32, "sd": 972.11, "total": 4070643.21, "viewers": 2000, "avgEp": 31.31, "epLen": 65}, {"show": "It's Okay To Not Be Okay", "avg": 1549.21, "median": 1487.73, "min": 0.07, "max": 5548.45, "sd": 930.77, "total": 3098417.85, "viewers": 2000, "avgEp": 20.12, "epLen": 77}, {"show": "Queen Of Tears", "avg": 1538.63, "median": 1468.32, "min": 1.42, "max": 4737.18, "sd": 922.82, "total": 3077253.88, "viewers": 2000, "avgEp": 20.52, "epLen": 75}], "nRows": 20000, "nClean": 18000, "nSubs": 2000, "issues": {"blank": 2000, "nonnum": 0, "neg": 0}, "pivotHead": [[1, 3703.45, 2509.75, 2836.8, 2450.03, 115.04, 843.06, 3260.99, 3121.12, 2585.26], [2, 3031.45, 1615.97, 2608.98, 1492.75, 1806.34, 1827.58, 2593.79, 2380.03, 1445.65], [3, 2270.14, 1300.93, 2175.69, 1774.1, 1530.63, 1438.6, 2882.43, 1893.27, 1323.56], [4, 2630.0, 2642.49, 2865.15, 2361.18, 900.71, 918.76, 2804.16, 2743.57, 2412.55], [5, 3274.28, 3433.79, 2074.9, 2246.94, 1751.98, 1959.81, 1419.81, 1913.16, 2611.33], [6, 4454.77, 3799.69, 3268.93, 3190.82, 2292.09, 1890.52, 2012.66, 3165.2, 3641.96], [7, 2612.78, 4154.9, 2356.6, 3329.0, 2341.05, 1909.28, 1788.87, 2263.84, 4147.63], [8, 3643.83, 3309.14, 2035.93, 3311.6, 1348.73, 1614.52, 721.26, 2052.73, 3047.92], [9, 2737.55, 3582.8, 2478.69, 3613.15, 716.56, 1087.49, 2260.7, 2175.03, 3401.21], [10, 3088.38, 2828.02, 3020.03, 2466.05, 937.14, 828.67, 4113.59, 3237.46, 2607.17], [11, 4212.32, 3064.56, 3580.2, 4167.05, 2211.39, 1941.84, 3679.89, 3454.29, 3537.19], [12, 3611.43, 3884.48, 2611.49, 4332.55, 1266.58, 676.36, 3348.5, 2628.99, 3883.7]], "rawHead": [[1, "Stranger Things", 49.4089, 66.0, 3260.9867], [1, "Dark", 43.6431, 65.0, 2836.7985], [1, "Queen Of Tears", 11.2408, 75.0, 843.0569], [1, "You", 47.0047, 55.0, 2585.2601], [1, "Dexter", 44.5459, 55.0, 2450.0253], [1, "Umbrella Academy", 48.0173, 65.0, 3121.1239], [1, "It's Okay To Not Be Okay", 1.494, 77.0, 115.0392], [1, "Big Bang Theory", 161.0194, 23.0, 3703.4458], [1, "Dahmer", 50.1951, 50.0, 2509.7527], [2, "Stranger Things", 39.2998, 66.0, 2593.7882], [2, "Dark", 40.1382, 65.0, 2608.9825], [2, "Queen Of Tears", 24.3678, 75.0, 1827.584]], "scatterA": {"x": "Dark", "y": "Stranger Things", "r": 0.83672, "pts": [[2836.8, 3261.0], [2175.7, 2882.4], [2074.9, 1419.8], [2356.6, 1788.9], [2478.7, 2260.7], [3580.2, 3679.9], [959.6, 1817.2], [193.3, 78.4], [3338.9, 3574.8], [1956.6, 1137.8], [2035.6, 1689.3], [3136.3, 2385.8], [2139.7, 1674.4], [3762.1, 2770.0], [1987.9, 2207.5], [1269.7, 1270.5], [3160.7, 3035.0], [3044.0, 2923.1], [1489.2, 1772.9], [2123.6, 2572.6], [2033.6, 2048.0], [1025.2, 358.9], [77.8, 241.1], [2067.8, 1608.9], [1393.2, 1529.9], [111.6, 552.9], [1996.7, 2481.7], [3151.0, 3732.5], [2116.9, 1985.9], [1601.1, 1780.2], [766.6, 1201.3], [1807.8, 1187.7], [2458.7, 2262.4], [2148.0, 2404.9], [3368.9, 2505.6], [1000.4, 1034.5], [1729.5, 2421.4], [2505.3, 1401.9], [1116.2, 1458.6], [2308.4, 1850.5], [2220.4, 2551.5], [1362.4, 1255.0], [563.7, 569.9], [3110.3, 3064.5], [2620.1, 2509.2], [2477.4, 2067.6], [913.5, 1210.7], [1212.0, 769.1], [498.7, 763.0], [3156.3, 2857.1], [2080.6, 2736.0], [2938.1, 2443.5], [3470.8, 2941.4], [1219.2, 1154.6], [2144.8, 2967.6], [404.4, 1262.1], [1264.5, 1518.7], [2113.5, 2194.0], [3387.8, 3369.5], [4273.4, 4034.7], [1263.9, 751.2], [1699.4, 3059.9], [1124.1, 493.6], [1415.5, 1142.5], [1804.3, 1130.0], [3669.0, 3800.3], [1769.3, 2363.7], [2521.3, 2161.0], [2520.3, 2344.6], [1341.8, 1899.0], [3133.6, 3366.3], [3257.5, 2222.6], [3211.6, 3867.7], [1344.0, 1325.1], [964.8, 1590.5], [2293.8, 1894.8], [3238.3, 2735.1], [2108.2, 1931.4], [1365.8, 1746.7], [4037.5, 3487.8], [827.1, 2084.7], [2016.4, 2726.0], [1049.4, 859.8], [2167.6, 2199.9], [1090.7, 1109.3], [549.3, 229.3], [7.1, 353.2], [2662.9, 2057.7], [1912.0, 2276.9], [2688.0, 2334.8], [989.7, 2698.9], [3438.9, 3771.1], [1436.0, 1899.3], [1551.6, 850.4], [2356.1, 1773.1], [2180.2, 2617.5], [2440.1, 2934.6], [2196.4, 2822.4], [2876.3, 2720.8], [3967.2, 3229.0], [3391.4, 3186.1], [2714.0, 2681.1], [3706.4, 2349.8], [3029.6, 3406.8], [2308.2, 3356.5], [3556.2, 3292.5], [1329.7, 2117.6], [2571.1, 3031.9], [996.5, 898.1], [2692.1, 1839.9], [1191.8, 1458.2], [3232.9, 3248.5], [1793.3, 1617.1], [2489.7, 2806.0], [1939.7, 1929.6], [1376.5, 1812.9], [1083.1, 654.3], [3865.5, 4574.8], [671.6, 750.0], [4140.3, 3668.7], [1694.7, 1078.2], [2600.0, 2826.8], [1815.3, 2113.9], [1282.7, 372.8], [2671.3, 3261.6], [951.3, 1443.4], [2039.5, 1512.3], [1726.9, 1103.8], [273.0, 690.4], [3340.0, 2729.1], [840.3, 877.3], [688.3, 1494.2], [993.8, 1389.9], [2371.8, 1809.8], [2691.4, 2845.0], [1188.7, 2103.7], [3636.2, 4368.2], [3051.2, 2611.2], [2148.4, 2322.2], [1534.3, 2073.7], [2772.5, 2810.1], [2348.0, 1757.8], [1651.7, 2596.9], [2654.1, 2244.3], [2353.5, 1643.6], [1539.3, 1368.0], [1286.3, 1751.0], [2699.0, 2749.0], [2737.7, 2631.7], [2489.0, 2850.2], [1147.4, 1100.6], [2947.4, 3209.0], [3031.3, 2224.2], [326.2, 381.8], [3735.0, 4373.6], [2953.6, 2420.7], [448.0, 816.4], [665.7, 428.4], [2304.2, 2078.9], [2658.7, 3567.6], [1025.5, 878.5], [2540.3, 2566.7], [542.0, 195.4], [61.6, 1246.4], [2923.6, 3360.9], [1737.0, 1108.8], [1153.3, 1475.0], [1358.9, 1423.5], [998.0, 223.0], [2370.9, 2140.7], [371.6, 677.8], [1329.1, 2112.5], [1552.0, 1900.4], [4184.4, 4418.9], [1122.4, 1458.2], [1277.4, 960.2], [2527.6, 2274.6], [2746.4, 2621.7], [218.4, 1267.4], [1631.2, 867.7], [1789.5, 1223.9], [1523.1, 2556.6], [3735.1, 2932.6], [2562.3, 3327.1], [1044.9, 1538.2], [3164.5, 2861.7], [110.6, 493.6], [2641.9, 2470.1], [2044.5, 1343.6], [2385.5, 2172.1], [5211.8, 4857.6], [1123.0, 2422.5], [2922.2, 2574.5], [2794.1, 2944.3], [2962.7, 2746.2], [2401.5, 2539.1], [608.9, 1241.6], [1123.2, 1658.4], [1921.6, 3000.2], [1390.2, 1198.4], [1988.5, 1851.6], [1827.4, 1188.8], [3182.4, 3350.7], [2914.5, 3677.2], [1795.9, 2417.8], [3357.8, 2357.0], [2172.8, 2132.6], [2807.9, 3033.6], [3638.9, 4322.8], [1626.4, 668.6], [125.7, 150.0], [1189.5, 1158.4], [1276.0, 1248.2], [2116.2, 1792.3], [736.6, 1226.3], [4668.7, 4981.5], [2507.1, 3148.1], [2570.2, 2305.4], [2779.2, 3328.6], [3245.0, 2476.6], [1297.2, 1447.8], [739.5, 745.0], [12.8, 712.7], [2124.3, 1539.7], [2136.7, 2784.8], [2844.7, 2803.8], [1494.8, 1790.9], [1009.4, 1221.2], [3186.1, 3383.0], [1972.2, 848.4], [1123.8, 986.3], [2426.5, 2183.2], [3214.4, 3344.1], [1795.3, 1144.7], [3008.4, 2112.2], [963.1, 982.8], [1067.3, 1602.3], [3046.7, 2671.3], [1519.8, 2377.1], [2386.7, 2308.4], [813.5, 657.7], [1325.8, 1460.6], [3078.3, 2612.9], [2266.4, 3060.2], [258.3, 343.3], [850.1, 1219.7], [4485.8, 4033.8], [2439.1, 2631.8], [1869.7, 1471.1], [2866.5, 3165.2], [447.7, 352.8], [1545.7, 2085.0], [1540.0, 1958.7], [4574.8, 3979.6], [2064.7, 2361.9], [899.9, 601.9], [1924.9, 3167.1], [1623.0, 776.3], [1638.9, 702.8], [1398.4, 1115.8], [3416.0, 3844.2], [2283.9, 2786.4], [2796.6, 2052.9], [2445.8, 3050.2], [1059.3, 1674.7], [2832.0, 2563.0], [3472.4, 3854.3], [1412.5, 1858.1], [2388.7, 2369.0], [357.9, 990.9], [2576.0, 2925.5], [797.7, 784.4], [1447.2, 856.9], [21.4, 1312.9], [719.2, 1307.7], [846.1, 1110.9], [229.9, 1364.4], [2900.9, 2392.1], [2099.8, 2023.7], [2648.4, 3049.5], [1302.5, 1794.7], [2554.8, 2267.0], [603.1, 671.1], [1848.1, 1282.4], [2903.1, 2828.8], [1394.8, 2172.5], [2872.0, 2235.4], [2067.6, 1852.1], [1881.3, 1602.4], [1949.5, 2515.0], [1196.6, 1386.0], [774.6, 576.1], [1084.9, 1508.9], [3309.8, 3791.1], [925.1, 660.3], [1054.8, 1241.8], [767.7, 1399.5], [2405.2, 954.0], [2281.2, 1645.1], [1964.5, 1489.0], [2575.0, 3018.4], [2129.6, 986.2], [1791.4, 2000.8], [2562.7, 2336.9], [1271.7, 679.6], [2415.1, 1914.2], [1263.0, 1371.0], [1506.3, 1540.7], [2848.9, 2737.9], [2648.4, 3235.0], [166.6, 23.2], [1153.9, 896.8], [565.0, 323.6], [2458.1, 2388.8], [2112.0, 1703.1], [1869.7, 1452.1], [498.3, 795.5], [1557.6, 2071.2], [1439.6, 997.7], [2291.2, 2312.2], [768.7, 345.4], [2951.3, 2794.8], [2396.0, 1667.6], [220.0, 697.2], [1579.7, 1965.7], [3521.2, 2962.0], [2453.3, 1255.0], [2818.2, 2456.2], [2824.5, 1976.2], [1845.4, 1802.6], [2800.2, 3048.1], [1764.9, 1924.4], [476.2, 138.6], [772.8, 294.8], [876.6, 602.9], [2344.5, 2111.1], [2868.5, 2965.5], [3153.3, 4013.1], [3539.2, 3481.3], [2471.7, 1573.3], [1963.8, 2245.7], [2302.6, 2834.5], [2247.2, 2568.9], [1652.5, 2190.2], [3035.0, 2796.0], [1118.0, 868.2], [2340.8, 1666.8], [2457.5, 2200.9], [1329.9, 1772.1], [2607.6, 1011.0], [4138.8, 4475.9], [2342.0, 1745.6], [3351.1, 4091.9], [2385.3, 2220.0], [2610.0, 1995.0], [2413.0, 2043.8], [2772.7, 2616.6], [3470.7, 3523.7], [1704.2, 1960.2], [1052.4, 1278.3], [2409.9, 1818.4], [331.5, 106.0], [1534.2, 2037.1], [769.1, 1365.3], [1778.5, 2435.0], [1326.5, 1585.6], [2063.7, 660.3], [2322.0, 2791.9], [3198.2, 2883.6], [2742.5, 2394.6], [3862.0, 3191.8], [2792.3, 1607.8], [4027.6, 4122.1], [278.3, 846.2], [2438.4, 3147.2], [1942.8, 2752.7], [906.6, 869.6], [1862.2, 2193.2], [2673.6, 2402.0], [3503.1, 2925.9], [2674.4, 1801.2], [1575.1, 2226.3], [1745.0, 460.4], [2574.4, 1808.9], [1142.5, 926.2], [3412.2, 1862.8], [2224.7, 1864.3], [554.9, 279.8], [1892.1, 1991.3], [934.6, 891.8], [2268.6, 1941.2], [2505.5, 2239.7], [2028.6, 1335.0], [2529.5, 2745.2], [1290.0, 1058.4], [2240.1, 2693.8], [3267.1, 3613.6], [2157.5, 1463.2], [2395.4, 3006.7], [3108.6, 2460.9], [2074.9, 1363.1], [399.5, 703.5], [2997.7, 2887.1], [2480.1, 2699.5], [1511.8, 1445.6], [2643.1, 2738.5], [1879.5, 1782.2], [2012.8, 2697.9], [2584.6, 2600.7], [3346.3, 2766.8], [2392.3, 3487.2], [1505.8, 920.7], [2596.3, 2832.4], [448.7, 424.2], [268.1, 120.5], [571.9, 1171.7], [1457.6, 1050.5], [82.1, 320.9], [2694.6, 2343.8], [2335.6, 2312.6], [2196.4, 2141.1], [2493.9, 2231.4], [1964.4, 1058.7], [1752.5, 1453.9], [2309.4, 1244.4], [3228.0, 3511.2], [2728.5, 1547.7], [810.8, 1044.3], [1147.3, 2205.3], [2218.5, 1987.7], [1492.6, 2051.9], [307.4, 1036.3], [128.6, 146.4], [3050.6, 2867.6], [1418.2, 1006.2], [2584.7, 2217.9], [3687.2, 3135.7], [2637.9, 1838.7], [1060.4, 1637.2], [3041.5, 3468.7], [441.7, 780.6], [4136.4, 4134.2], [1534.6, 1530.7], [2275.3, 1905.5], [2340.0, 1984.1], [1191.3, 385.2], [1939.3, 1647.6], [3916.1, 3275.9], [115.8, 51.8], [2525.4, 1718.6], [142.9, 720.7], [2072.0, 1669.8], [3228.2, 3214.6], [1299.6, 1801.1], [2500.5, 2286.5], [2455.1, 2469.8], [1958.1, 1903.5], [2319.7, 1569.9], [3965.7, 3939.6], [2805.1, 2147.2], [650.7, 1557.5], [1053.9, 986.0], [3086.5, 2505.0], [740.9, 979.3], [3300.0, 3044.0], [3987.5, 4124.6], [2840.1, 2161.2], [1689.9, 1309.3], [1688.2, 1268.4], [1670.8, 1682.9], [1915.2, 1159.3], [3185.7, 2889.0], [2746.1, 2115.4], [630.6, 457.2], [1391.6, 1861.5], [188.2, 521.6], [1601.1, 1747.8], [2171.9, 3001.6], [1849.3, 2461.4], [1449.4, 1687.5], [4164.6, 4150.4], [1637.2, 1730.6], [2555.8, 3255.3], [3128.4, 2758.2], [2371.7, 2677.7], [2672.8, 3116.0], [46.2, 530.6], [2880.9, 3051.2], [2950.1, 2887.3], [1244.6, 1427.2], [944.8, 11.7], [2273.9, 2120.5], [2772.7, 3071.0], [1080.7, 1224.0], [1014.2, 1937.2], [2563.9, 1822.8], [1778.1, 1736.6], [2218.2, 1790.4], [655.3, 751.6], [2198.8, 1988.7], [1523.3, 900.3], [2421.0, 1834.9], [4450.6, 4293.3], [2338.8, 1940.6], [2022.6, 1700.8], [2034.8, 2101.4], [2324.6, 1485.2], [1227.3, 2285.2], [2412.8, 1857.2], [3543.9, 3874.9], [2161.6, 2084.1], [3184.6, 2636.8], [4114.4, 2960.8], [2709.6, 3603.6], [867.7, 878.3], [1097.5, 1469.0], [3015.4, 3623.8], [1405.6, 810.0], [842.3, 431.6], [2377.8, 1666.4], [3962.8, 4563.2], [1372.2, 1767.5], [1603.1, 1663.2], [2741.9, 2280.1], [2066.9, 3017.2], [1539.7, 1308.5], [1995.1, 1509.3], [1674.9, 993.1], [1646.6, 1614.6], [1028.5, 1115.7], [1990.7, 2228.3], [3723.3, 3449.7], [1323.8, 1291.7], [4564.8, 4494.8], [2919.6, 3670.3], [3407.9, 3695.7], [751.8, 772.3], [596.4, 1670.9], [3716.5, 3639.9], [685.5, 1383.5], [1225.3, 1295.1], [1626.7, 2011.3], [2209.7, 2884.3], [1005.8, 500.5], [2998.7, 2623.2], [643.9, 135.8], [2423.0, 2248.2], [2978.0, 2532.1], [2053.0, 1653.1], [189.6, 536.6], [1821.0, 1303.5], [1291.9, 1092.6], [917.2, 1026.0], [2185.6, 2828.0], [3363.4, 3210.2], [490.8, 794.4], [611.4, 780.8], [727.9, 537.2], [1390.5, 1555.0], [4283.4, 3842.8], [872.9, 159.7], [2696.7, 1822.4], [2523.6, 2424.2], [2417.8, 2315.4], [2661.7, 2535.5], [2367.2, 1560.2], [1218.6, 1575.6], [3591.8, 3558.1], [2625.5, 1870.3], [3265.0, 3476.3], [1808.1, 1627.9], [2564.6, 3120.7], [2369.0, 2503.9], [933.6, 1255.9], [171.5, 1290.2], [2159.6, 2006.6], [1393.9, 1259.8], [2215.7, 1999.1], [2705.7, 2675.0], [4112.6, 3971.9], [1156.7, 1604.9], [2313.1, 1713.9], [2365.9, 2254.6], [2207.8, 1332.2], [369.1, 82.4], [4272.3, 4604.5], [395.4, 155.3], [1347.6, 316.7], [1912.7, 1896.8], [1005.1, 1400.5], [1681.9, 1907.3], [1398.7, 1099.6], [1357.8, 1561.6], [2453.0, 2655.2], [1425.7, 1518.1], [2194.1, 2550.9], [3557.0, 3219.8], [3699.7, 3337.6], [4272.5, 3634.3], [1681.6, 2061.5], [4399.6, 3588.0], [4609.6, 4443.6], [2076.0, 3142.5], [930.6, 1280.7], [3093.2, 3391.3], [9.3, 165.8], [2267.5, 1523.5], [1724.6, 1729.0], [1888.5, 1635.8], [1917.0, 1138.5], [2055.1, 1944.0], [1911.9, 2238.7], [2788.7, 3542.6], [1667.6, 1735.5], [2682.7, 2354.1], [1821.7, 1674.4], [2159.7, 1669.1], [1504.9, 1454.2], [2964.5, 3636.7], [1581.1, 1602.1], [2374.2, 2216.8], [1678.9, 2494.3], [721.2, 1278.1], [1064.9, 987.2], [1547.5, 1229.5], [2349.6, 2392.5], [1138.0, 1458.4], [1888.0, 1698.2], [445.3, 1963.4], [2643.6, 1707.6], [2490.8, 2030.1], [1907.2, 1201.2], [1565.7, 2175.4], [2021.5, 2543.0], [978.1, 1710.9], [2470.9, 2782.2], [1738.7, 1885.8], [2675.1, 2917.0], [1229.8, 1743.7], [230.3, 393.9], [3248.9, 2543.1], [1671.1, 1653.4], [1134.2, 1589.5], [1923.9, 740.2], [1926.4, 1905.2], [1671.0, 2389.2], [250.3, 720.3], [3324.9, 2958.3], [1716.2, 2176.1], [1927.1, 2406.8], [1005.1, 987.6], [1958.1, 570.4], [2936.4, 2384.1], [2057.6, 2132.9], [1742.8, 2140.3], [2620.2, 2968.9], [1681.3, 1389.4], [345.7, 550.3], [2553.8, 1717.9], [1936.2, 1512.7], [2991.2, 3286.8], [2480.3, 2457.5], [1498.8, 1003.1], [2597.2, 3579.7], [3036.5, 3251.7], [732.2, 599.1], [3881.8, 4121.2], [2766.9, 2524.3], [3103.8, 2498.5], [1058.8, 1211.1], [797.0, 350.1], [1478.5, 1852.8], [1136.0, 1713.8], [1783.6, 703.4], [2890.4, 2731.0], [3749.4, 3415.3], [1970.5, 2821.3], [1280.6, 519.0], [1663.9, 1924.2], [958.9, 1253.3], [3.4, 754.2], [2792.2, 3409.1], [4193.9, 4645.7], [2475.1, 2593.7], [2811.3, 3001.6], [2930.7, 1967.6], [1544.0, 1423.3], [982.9, 1930.5], [1669.9, 2264.8], [2770.9, 3145.4], [2228.6, 1889.1], [2870.6, 3132.7], [2194.0, 2937.7], [1529.8, 1081.9], [4712.4, 4135.6], [535.2, 24.7], [2386.1, 1882.9], [1311.1, 1084.7], [2050.0, 1008.2], [2468.1, 2108.1], [1823.4, 1653.6], [246.7, 1134.9], [1063.8, 1404.5], [1123.1, 712.9], [840.0, 472.3], [725.0, 1538.9], [627.8, 975.1], [2785.1, 2269.2], [1146.7, 1249.6], [1796.2, 2449.6], [2208.4, 1641.3], [2371.4, 2441.8], [153.9, 180.5], [2134.8, 1442.3], [1927.1, 1772.2], [2591.8, 3430.1], [4733.9, 3630.1], [17.4, 593.3], [2296.6, 1885.5], [2974.6, 2284.6], [2009.1, 1554.4], [2028.8, 1693.3], [155.6, 289.8], [2242.1, 2898.1], [1396.9, 1675.0], [1561.3, 2421.4], [1094.5, 2255.0], [1400.4, 2216.5], [3552.9, 2630.1], [2099.8, 1663.7], [236.5, 539.6], [3369.8, 3306.9], [972.3, 1119.9], [1908.8, 2931.7], [2620.7, 2014.1], [1882.4, 1925.7], [920.4, 741.1], [1852.7, 1986.1], [633.3, 1420.3], [1579.7, 1691.1], [2197.2, 2492.7], [1005.5, 1658.7], [1192.7, 709.6], [2554.6, 1783.1], [2016.0, 2501.7], [1438.8, 1474.9], [3443.2, 2519.8], [3493.6, 3027.7], [2676.3, 3192.8], [2433.0, 2742.5], [855.3, 84.6], [2099.8, 3051.7], [1853.4, 2602.5], [3853.9, 2682.1], [1684.0, 1814.7], [343.3, 752.8], [463.7, 1391.2], [1374.5, 2954.5], [2414.0, 2097.8], [774.6, 1611.1], [2545.2, 2186.6], [801.4, 557.4], [3098.5, 2969.1], [1421.8, 1728.4], [2698.2, 3250.2], [2191.8, 2394.4], [1717.8, 1215.3], [2637.8, 3229.1], [743.4, 1185.5], [1929.3, 1726.2], [2555.9, 2232.7], [731.4, 1054.2], [2082.1, 2866.2], [2480.5, 2440.9], [3079.4, 2664.5], [2203.5, 2116.6], [533.3, 990.3], [851.5, 1742.4], [1932.2, 2162.0], [3494.7, 3568.8], [2802.8, 2739.8], [3712.9, 3628.5], [1038.5, 1041.0], [1029.2, 2267.6], [1301.2, 1708.8], [1052.0, 127.8], [2300.2, 1694.7], [2076.0, 1953.9], [3806.8, 4527.1], [2566.3, 4100.8], [966.9, 1037.0], [1740.6, 2498.8], [3898.7, 4499.7], [1564.3, 1953.9], [242.1, 191.5], [1210.2, 279.6], [3526.4, 3579.1], [3089.1, 2407.5], [3574.7, 3786.7], [855.7, 1293.8], [2687.5, 2344.8], [2469.0, 2536.1], [2073.9, 2012.3], [2183.7, 1378.2], [2982.0, 3137.7], [578.4, 555.2], [2467.7, 2887.4], [2864.0, 2555.4], [2038.1, 2486.3], [2693.0, 3039.7], [1895.9, 2624.8], [1581.5, 2118.4], [1639.0, 1146.1], [3020.7, 3563.4], [1242.7, 795.3], [2003.1, 1750.7], [3248.6, 3652.7], [3563.8, 3211.2], [2388.7, 2758.5], [2770.4, 2751.9], [399.7, 991.1], [2512.7, 2894.4], [3187.6, 3050.7], [4393.1, 4075.3], [1242.6, 701.3], [2981.0, 2278.5], [4185.1, 3927.3], [2821.9, 2593.0], [1546.5, 1261.5], [3092.0, 2816.9], [4278.5, 4071.1], [433.0, 517.4], [2319.0, 2699.0], [1014.8, 1358.6], [841.2, 1063.5], [1756.5, 1853.5], [1847.2, 2425.3], [1445.8, 954.8], [1606.9, 1566.9], [2655.9, 3175.1], [2251.2, 2881.5], [449.2, 856.3], [1737.5, 1644.5], [2544.6, 2229.1], [661.6, 932.6], [2224.4, 3230.5], [2179.2, 2891.8], [1577.6, 1661.7], [5232.5, 4166.1], [2515.0, 2324.1], [1322.0, 2008.2], [1364.7, 1709.6], [1880.9, 2107.6], [1173.8, 632.0], [994.3, 678.4], [3656.9, 3327.7], [2639.8, 3319.6], [3702.7, 2753.7], [3401.5, 2858.9], [3161.2, 2560.9], [262.4, 1105.9], [3399.8, 2833.3], [3184.7, 3227.1], [1919.1, 2250.2], [2398.9, 2819.1], [2065.4, 2249.4], [4257.5, 3140.0], [2812.7, 2672.2], [1974.9, 943.8], [1865.9, 1131.4], [2837.5, 2957.4], [398.7, 1076.5], [1772.9, 1872.2], [1835.1, 1799.5], [752.7, 821.5], [613.6, 836.3], [4593.0, 4538.1], [1836.7, 2543.3], [1422.6, 543.3], [1715.6, 1070.7], [182.4, 130.7], [2147.7, 2978.8], [950.4, 225.6], [2239.8, 2443.8], [2830.0, 3122.9], [1806.2, 2501.4], [1183.4, 1007.3], [2222.1, 1287.7], [2738.4, 2911.1], [3237.3, 3683.0], [1914.3, 2257.0], [2706.2, 1775.4], [843.3, 59.2], [2900.1, 2536.8], [2278.4, 1972.5], [2443.8, 3366.3], [2269.9, 1657.2], [3099.3, 3846.7], [1168.7, 1529.0], [2699.9, 3029.1], [1933.7, 2404.3], [2988.4, 2163.8], [1659.6, 1535.2], [2475.7, 1977.3], [2595.1, 3187.5], [2025.0, 2109.9], [2470.1, 1713.4], [2417.3, 2342.6], [674.3, 1708.3], [2.6, 483.4], [1429.0, 1289.1], [2304.4, 2260.8], [3037.1, 3139.0], [3018.8, 3636.7], [2243.5, 2545.3], [2856.5, 2694.2], [2306.2, 2682.5], [1915.0, 1003.4], [1183.2, 517.0], [2280.6, 1478.6], [11.0, 1821.8], [1873.2, 1590.6], [2455.9, 3163.8], [1556.6, 915.2], [2090.3, 1357.4], [926.5, 872.9], [1231.6, 2338.3], [3598.2, 2528.2], [1457.3, 1721.0], [2561.9, 2427.9], [2152.4, 1951.3], [2372.2, 2905.0], [27.6, 644.2], [2295.7, 2581.6], [2218.6, 2893.2], [1903.4, 440.1], [2537.5, 1999.1], [2282.4, 2522.0], [101.1, 983.4], [1075.7, 1023.9], [1845.3, 1679.1], [900.8, 956.3], [1758.4, 1127.9], [1286.8, 1670.4], [1877.8, 2184.7], [3388.1, 3491.8], [1763.6, 2109.8], [278.7, 160.8], [2459.8, 1805.3], [2214.6, 2832.8], [1299.8, 1198.6], [3009.1, 2488.2], [1025.3, 834.5], [3117.5, 2153.9], [549.0, 920.1], [3585.1, 2077.7], [2523.9, 1599.6], [2204.7, 2149.0], [1490.4, 2326.1], [2825.4, 2110.4], [1845.5, 1628.1], [1990.9, 2552.1], [1703.1, 1299.3], [2170.8, 2629.1], [3058.0, 2970.4], [4005.7, 2908.8], [3913.3, 4026.1], [2426.8, 2639.5], [1005.3, 678.9], [1625.3, 1148.6], [2368.8, 3027.2], [251.4, 429.5], [1081.7, 2169.4], [277.6, 218.8], [2052.9, 1979.7], [1742.5, 1516.2], [2367.5, 1845.3], [1673.5, 823.7], [1987.4, 1532.8], [2036.9, 2884.7], [1811.3, 2041.2], [2027.5, 2238.3], [2782.8, 2949.0], [3943.6, 3220.9], [2789.7, 1292.7], [1490.7, 2240.2], [1482.4, 977.3], [1687.6, 2094.1], [2372.3, 2868.5], [2523.5, 2260.6], [1297.4, 800.6], [1055.3, 1983.7], [1721.3, 3456.5], [3010.8, 2389.3], [2822.1, 2752.4], [1342.1, 2275.5], [1589.6, 2325.0], [4488.0, 4464.6], [231.5, 997.4], [1331.7, 2007.9]]}, "scatterB": {"x": "Big Bang Theory", "y": "You", "r": -0.005369, "pts": [[3703.4, 2585.3], [2270.1, 1323.6], [3274.3, 2611.3], [2612.8, 4147.6], [2737.6, 3401.2], [4212.3, 3537.2], [2007.0, 2695.6], [4005.0, 2943.7], [2080.9, 2758.1], [3562.8, 1823.8], [3014.3, 3351.8], [3659.3, 3081.1], [2347.4, 2654.0], [3268.3, 2952.3], [4339.0, 3946.1], [3506.5, 2779.9], [2462.2, 2693.0], [2549.5, 3354.1], [3379.7, 2505.0], [2437.7, 3178.5], [3151.7, 2410.6], [2291.4, 4030.4], [3035.9, 3938.4], [2273.2, 2253.6], [3539.2, 2556.3], [4028.0, 2650.7], [1762.0, 955.9], [3303.3, 1982.7], [3016.0, 3163.9], [2838.2, 2693.0], [2760.8, 2267.9], [4348.1, 2420.9], [3872.8, 2851.0], [3739.2, 3027.2], [1585.4, 4485.3], [2247.2, 2502.5], [1945.3, 3726.5], [3111.6, 2308.7], [3535.3, 3605.0], [2943.6, 566.4], [2831.7, 3865.0], [3312.4, 3721.3], [2346.7, 636.8], [3090.8, 2409.9], [1640.5, 3502.3], [3115.3, 1745.1], [2462.9, 2829.9], [3587.9, 1712.6], [3024.7, 2713.7], [2005.9, 2777.3], [2741.8, 3947.9], [4013.8, 1802.7], [3895.1, 2301.5], [3053.0, 2690.3], [2527.6, 4200.9], [2858.7, 3054.2], [3963.7, 3894.2], [4226.9, 2713.2], [3677.5, 3769.9], [2510.5, 3053.2], [3759.3, 2408.0], [3541.5, 2786.0], [3658.8, 1771.4], [4066.9, 719.7], [4148.1, 3801.5], [3114.9, 3722.9], [2158.0, 4661.9], [2133.1, 2937.1], [2552.3, 2948.6], [3394.2, 2885.2], [2102.5, 830.3], [2281.2, 4078.4], [4074.2, 3432.0], [4416.8, 4765.1], [2536.6, 4334.9], [2958.0, 2906.1], [2607.8, 3076.5], [3966.8, 3682.9], [2459.2, 3520.9], [3121.5, 1424.1], [2718.3, 2963.9], [1748.1, 3899.9], [2617.0, 3142.5], [2980.9, 4046.9], [4351.1, 3599.3], [2121.9, 2699.8], [2471.6, 2543.3], [3407.6, 3551.8], [1834.2, 2850.5], [3463.6, 3547.8], [2997.2, 2265.2], [3778.7, 2472.3], [3292.9, 1856.7], [2848.8, 2654.0], [2994.7, 1551.9], [3389.7, 2961.4], [1913.7, 2551.1], [4462.9, 2303.1], [2833.4, 2203.7], [2556.8, 1940.1], [4120.6, 2379.1], [2357.2, 3603.3], [3062.9, 3062.7], [4129.7, 2409.3], [4330.3, 1291.2], [4144.0, 4629.4], [4032.8, 2008.1], [2093.9, 3285.3], [1872.9, 3437.0], [2357.3, 408.1], [3026.4, 3593.4], [3117.0, 2873.0], [3534.6, 3183.7], [4456.0, 2101.3], [2583.1, 4175.1], [2084.6, 3187.2], [3799.5, 2831.7], [2033.4, 3566.9], [3039.0, 5061.4], [3902.8, 3012.1], [4607.1, 2584.5], [2889.1, 2901.8], [2642.1, 2778.4], [4251.2, 1057.4], [3369.8, 2528.2], [3009.0, 3857.4], [3197.8, 2389.9], [2242.1, 568.2], [2075.6, 3653.7], [3821.6, 2340.3], [4278.1, 2916.6], [2716.6, 2134.9], [3452.9, 2638.4], [3258.1, 3087.0], [2762.7, 3476.3], [2948.2, 3383.9], [2038.8, 2709.1], [3357.9, 642.7], [2867.3, 3266.3], [4216.5, 3219.1], [2010.1, 2885.9], [3680.0, 2540.7], [2966.8, 3775.3], [2454.0, 3558.4], [3221.6, 3666.7], [2450.5, 3035.7], [2913.1, 3511.1], [1842.5, 3539.8], [2862.4, 2467.0], [1719.8, 1563.9], [2863.1, 2646.5], [2279.4, 4422.6], [2610.7, 2679.9], [2464.4, 3575.9], [5182.8, 1782.3], [3145.2, 3311.1], [1402.4, 4033.1], [3139.5, 2578.2], [3319.6, 3007.1], [2240.3, 3084.8], [3743.1, 2329.0], [3030.4, 3610.9], [2723.5, 2121.6], [3665.4, 4665.1], [2775.3, 3232.3], [3746.3, 2833.4], [1696.6, 1095.5], [3558.5, 3050.1], [3201.5, 2126.1], [2823.3, 1163.7], [2881.4, 2491.2], [2642.9, 3033.6], [2354.9, 2514.5], [3001.3, 2945.2], [3005.7, 3222.9], [945.9, 3677.0], [3333.7, 3050.8], [2575.5, 1861.1], [2337.5, 3452.6], [3217.3, 1821.2], [2233.2, 3323.8], [2415.0, 1921.6], [3113.4, 2356.4], [3813.3, 2188.7], [1998.6, 1997.8], [3663.4, 3292.2], [3231.4, 606.7], [2408.7, 2601.1], [4307.7, 3092.6], [1986.1, 3358.7], [2249.5, 3231.2], [2283.2, 4354.2], [2411.1, 3895.4], [3245.3, 1712.6], [3414.2, 2053.9], [2376.4, 2238.5], [4215.2, 4585.6], [3339.7, 2009.2], [1765.1, 2494.2], [3726.7, 4585.8], [2854.4, 2904.6], [3715.0, 3556.7], [3790.8, 3654.4], [1953.4, 3616.0], [3205.3, 3196.7], [4083.1, 3600.1], [4680.8, 1401.2], [3335.5, 3541.9], [1474.2, 2862.0], [1834.3, 2015.3], [3027.8, 2501.9], [1793.9, 3053.4], [3078.5, 4262.2], [2654.6, 2834.4], [2026.0, 3611.6], [3382.3, 2517.7], [2548.0, 2118.2], [1781.2, 3270.2], [3534.9, 1886.2], [2836.9, 2904.8], [653.0, 2915.0], [3282.9, 3800.9], [2669.8, 3179.4], [3427.3, 3404.7], [3025.7, 1780.3], [3609.7, 4310.9], [3123.1, 3352.2], [2849.3, 3063.5], [3812.7, 3457.0], [3006.8, 1442.9], [2807.8, 2603.0], [3394.5, 1636.5], [2352.2, 922.1], [3016.2, 1684.9], [2784.2, 1847.7], [4427.7, 1699.0], [3500.2, 3122.7], [2228.3, 3268.1], [4940.3, 3271.0], [3893.1, 3127.2], [1817.5, 2312.4], [3117.4, 3664.9], [2396.7, 2733.6], [2619.2, 1659.6], [3948.0, 3770.7], [4117.3, 1800.4], [2196.5, 2996.4], [3167.9, 1303.3], [3461.8, 4422.1], [3429.0, 1630.5], [2276.3, 2134.5], [2443.5, 2275.1], [3425.7, 3779.2], [3390.4, 4115.9], [3248.1, 3569.5], [2099.2, 2962.3], [2936.9, 2356.7], [3009.1, 1268.8], [2827.6, 2171.7], [2884.3, 3328.3], [3064.6, 2747.4], [3281.6, 2719.7], [2280.4, 2811.4], [2206.8, 3794.0], [3315.9, 2565.0], [3149.5, 4239.7], [2929.8, 2304.6], [2059.4, 3619.5], [2568.5, 2647.5], [1208.2, 3103.2], [2914.1, 3052.2], [3180.7, 3412.5], [2042.3, 3569.2], [2503.1, 964.6], [4181.9, 4031.1], [4019.2, 2428.6], [1779.9, 2657.6], [3268.1, 5319.9], [4182.5, 2104.0], [3687.8, 1536.1], [3684.6, 2482.0], [2348.8, 3495.8], [1843.5, 2187.0], [2381.9, 2519.5], [3512.0, 2679.6], [3293.1, 1619.6], [4120.1, 2746.9], [1809.4, 2117.5], [1861.9, 2535.8], [4164.4, 2122.1], [3050.0, 3120.0], [2632.4, 2023.3], [2027.6, 3788.5], [2367.4, 1532.5], [4182.3, 3548.0], [1877.7, 2817.4], [3761.1, 3564.1], [2687.8, 4498.0], [3598.4, 2397.1], [2920.9, 2772.9], [3378.7, 999.6], [2571.8, 2516.1], [4628.8, 1310.6], [2167.2, 3232.1], [2885.2, 2678.7], [4785.2, 2396.8], [2697.7, 4143.7], [4384.1, 3569.1], [3220.8, 1928.0], [3103.0, 2189.6], [2505.3, 3204.5], [4064.6, 1783.9], [3661.3, 3444.7], [1845.0, 4844.3], [4150.4, 2915.9], [3231.8, 2395.4], [3887.4, 3272.4], [3550.6, 1791.9], [4586.6, 4412.4], [2294.1, 4735.5], [3063.8, 4832.9], [3181.9, 5695.2], [4290.7, 3800.9], [4087.2, 1941.3], [3333.2, 2434.3], [3902.4, 4627.3], [3154.4, 5168.3], [4423.7, 2520.9], [2513.3, 3229.0], [1791.1, 3172.6], [1823.0, 3950.6], [3195.6, 2171.4], [3085.2, 1820.7], [2977.5, 3107.3], [3068.4, 4899.4], [1650.7, 4550.9], [3195.8, 3417.9], [2875.4, 1302.0], [2309.1, 2906.9], [2754.5, 1881.1], [3314.7, 3649.3], [2176.3, 2959.4], [5077.9, 3506.5], [2585.1, 2834.3], [3288.7, 2450.9], [2645.8, 1994.1], [3049.1, 2319.0], [3196.3, 4468.8], [2982.2, 3444.4], [3854.5, 2039.6], [4267.1, 2545.6], [3724.1, 3843.0], [2291.5, 3087.1], [3840.9, 5887.0], [3354.0, 2810.9], [2143.2, 2641.3], [3240.8, 2687.4], [2296.7, 2788.9], [3641.3, 3141.6], [2310.9, 4244.7], [2331.2, 4172.2], [2706.3, 3833.0], [3524.8, 3212.9], [2666.6, 938.3], [3087.0, 4995.0], [2721.5, 4844.1], [1919.1, 2490.7], [3328.4, 2203.2], [2753.0, 3159.9], [4261.5, 3409.5], [3201.3, 3476.8], [3029.0, 1360.3], [1903.8, 4801.2], [3952.6, 3398.2], [2896.0, 1256.0], [4769.1, 2893.4], [2506.2, 1798.6], [3765.2, 1878.8], [3870.2, 3553.9], [3414.2, 4218.6], [2496.1, 4910.8], [2802.6, 2146.0], [2935.9, 2840.2], [2175.3, 2530.1], [2505.6, 953.0], [2291.2, 3286.5], [1426.3, 2108.2], [4089.2, 2477.7], [3401.0, 2232.3], [3044.9, 2144.7], [3835.6, 2342.1], [4119.3, 3599.6], [2505.8, 2511.6], [2418.0, 4646.1], [2676.0, 3511.6], [3255.8, 3196.7], [3235.7, 3359.0], [3730.5, 2659.6], [1873.3, 1836.7], [3568.8, 3022.0], [4712.8, 3652.5], [3039.1, 4379.5], [3397.4, 4290.1], [4731.9, 2784.7], [3787.4, 4594.3], [3164.3, 2465.4], [3474.5, 3048.2], [2479.9, 4213.9], [2517.2, 3700.5], [1463.2, 2187.2], [1966.2, 2956.5], [1392.2, 3852.2], [4208.6, 3879.3], [2041.3, 4247.7], [3985.0, 3474.2], [4627.8, 2977.7], [3546.1, 3389.2], [3501.9, 3221.0], [3415.9, 4468.3], [3102.5, 3125.1], [1282.3, 2761.1], [1798.1, 2810.5], [3266.4, 2422.0], [2773.5, 4164.3], [3376.8, 369.4], [4386.8, 4897.6], [3051.2, 5694.9], [3348.8, 3811.5], [2846.2, 2148.8], [2766.0, 582.9], [3730.1, 2604.6], [3094.3, 4236.5], [2510.5, 3146.4], [4959.0, 1576.2], [3364.7, 3560.3], [2220.8, 2360.1], [1334.0, 3793.2], [1215.9, 2915.4], [2057.5, 3500.4], [4101.2, 1273.0], [2227.7, 1080.6], [2387.6, 3426.0], [3138.3, 2366.6], [1467.0, 2660.9], [2747.5, 2688.4], [3283.9, 3713.0], [3276.1, 2716.4], [3969.0, 3346.9], [3732.4, 2089.4], [3334.1, 2746.3], [3302.1, 2820.9], [2994.7, 2809.6], [2584.5, 2593.0], [3237.0, 3834.8], [3310.6, 1149.1], [2094.6, 1769.4], [1895.5, 3518.2], [3196.4, 2621.7], [2568.2, 2836.4], [2598.3, 3115.1], [3891.4, 2506.4], [3704.8, 2953.2], [3226.3, 3173.1], [2382.2, 3153.5], [2581.1, 3407.7], [3277.4, 2369.7], [2071.7, 2442.8], [2658.4, 2672.2], [2648.6, 2083.6], [2689.8, 1185.0], [2846.3, 3244.2], [2374.8, 1864.8], [3860.5, 1405.8], [2111.1, 808.1], [2558.8, 2748.3], [4064.4, 3384.7], [2929.5, 3877.9], [3701.0, 4136.1], [4566.5, 2337.7], [1410.8, 2947.9], [1726.4, 5255.4], [1629.0, 3431.8], [2709.0, 2281.7], [2720.9, 3273.4], [2428.8, 4449.0], [2227.5, 3435.3], [3259.1, 3164.8], [1950.6, 3209.8], [3898.5, 1483.1], [2634.1, 1989.4], [3044.4, 2092.9], [977.4, 2999.3], [2323.8, 2357.1], [3148.7, 1794.0], [3206.1, 1821.5], [4157.6, 4758.2], [1993.4, 1825.6], [2523.7, 2046.3], [3842.6, 4239.2], [3601.0, 3987.8], [2728.1, 4901.0], [4087.8, 2701.1], [2291.1, 4274.3], [3410.4, 3583.5], [2483.3, 4920.6], [2662.6, 5586.0], [2986.7, 3219.2], [3188.7, 3671.3], [2086.0, 2357.8], [3137.7, 1214.9], [3697.5, 2680.8], [3384.2, 1260.0], [2596.5, 2646.1], [2799.4, 2922.5], [2742.4, 3168.9], [3065.3, 4791.5], [2986.0, 1913.7], [3025.1, 1209.5], [3194.1, 2469.6], [2043.6, 2575.0], [2781.1, 3570.2], [2774.8, 4884.1], [2640.6, 4694.4], [3379.0, 2638.1], [3131.2, 2459.8], [2530.5, 1804.3], [4940.9, 4407.2], [3498.7, 3344.1], [3631.9, 2994.9], [2946.3, 3854.3], [3705.4, 1858.7], [2588.5, 4283.8], [1943.0, 534.0], [3096.3, 3382.1], [2341.6, 3887.5], [3770.1, 2058.0], [3725.8, 4595.9], [2810.5, 1629.9], [3585.9, 2164.7], [2763.8, 4407.8], [3887.3, 2676.3], [2589.2, 2610.6], [2476.4, 2364.2], [2953.3, 1723.3], [3902.9, 2150.5], [1412.7, 3358.3], [3421.7, 1826.6], [3118.3, 4941.8], [3565.6, 3818.8], [2963.5, 4462.7], [3394.6, 2719.9], [1500.8, 2669.9], [3960.6, 891.1], [2723.9, 1810.6], [3863.1, 1870.8], [2600.8, 2333.3], [2771.9, 4443.3], [3063.8, 3869.2], [2399.2, 2256.7], [3363.7, 3613.7], [2858.5, 3999.7], [2904.9, 3572.9], [1258.6, 1264.4], [3247.3, 2785.8], [2880.5, 1805.3], [2648.1, 4608.0], [3010.3, 2719.1], [3013.5, 2860.9], [3527.1, 3066.1], [3339.9, 3663.8], [3805.0, 3667.3], [2474.6, 2750.7], [2367.5, 2759.9], [3586.0, 4304.9], [3070.4, 2327.2], [2431.8, 3510.6], [1892.3, 1919.5], [3801.1, 2826.9], [2677.9, 3454.3], [2891.4, 3890.1], [4004.2, 3353.7], [3159.5, 1320.1], [2563.4, 2583.2], [2175.9, 3344.0], [4677.7, 3595.1], [2333.5, 2015.0], [2057.3, 3944.7], [2357.6, 3841.2], [2797.7, 5068.7], [3968.1, 916.0], [1520.5, 2723.5], [3416.8, 2116.9], [4438.7, 2331.3], [3037.4, 3189.9], [1766.2, 2061.5], [3370.6, 3291.9], [3341.4, 3759.6], [2195.4, 1119.3], [3929.0, 1898.8], [3636.3, 1569.5], [3215.8, 4110.4], [2179.2, 3578.5], [1932.1, 3252.1], [4308.9, 1593.9], [2261.5, 1019.6], [2332.5, 2393.0], [3832.9, 3312.7], [4987.3, 3897.4], [3163.2, 2277.9], [2838.0, 2837.3], [4044.6, 3435.3], [2807.2, 2224.4], [3992.8, 4113.3], [1829.5, 1663.9], [2865.9, 2732.2], [3824.8, 2583.8], [2105.7, 3679.6], [3891.3, 3935.6], [1782.9, 2393.1], [2562.2, 2388.9], [3236.9, 1732.2], [2704.6, 2311.9], [3286.8, 5126.0], [2364.7, 3333.2], [2217.9, 3738.3], [1553.3, 3733.8], [3488.1, 2856.3], [2426.2, 3817.0], [2291.2, 2475.1], [3521.5, 4539.0], [2460.0, 3033.7], [3069.4, 2736.0], [4223.3, 2750.7], [3896.1, 3864.6], [3635.1, 3884.8], [2032.5, 3879.2], [3205.1, 3340.6], [2897.6, 2955.4], [3525.2, 1767.2], [4167.1, 4145.1], [3196.4, 3766.0], [3472.6, 1899.6], [3659.3, 1689.5], [2491.8, 3680.0], [2732.8, 3440.5], [4377.8, 4258.0], [3361.4, 1844.1], [2842.3, 4881.0], [4406.3, 2911.3], [2105.9, 3532.7], [1570.3, 3772.1], [2802.5, 1789.0], [3889.7, 1827.8], [2540.2, 2276.4], [4159.4, 3396.0], [2639.5, 2378.7], [3576.9, 1746.6], [4090.8, 3636.5], [2595.5, 3392.3], [3830.9, 3595.3], [2769.6, 3674.4], [2590.5, 3005.5], [4131.8, 2691.0], [2545.2, 2635.2], [5131.7, 2899.5], [3100.3, 4472.7], [3093.6, 5308.2], [2005.3, 2794.9], [4057.9, 3471.6], [3661.3, 3040.9], [2551.6, 636.3], [2447.7, 3994.6], [2754.6, 4161.5], [2506.2, 3072.8], [3679.0, 2163.1], [1912.0, 3793.9], [3337.6, 1630.8], [4493.8, 3822.9], [1226.2, 4230.5], [3568.3, 3399.9], [2215.2, 2595.7], [3370.0, 2273.0], [3625.1, 3259.6], [2696.8, 2944.1], [1924.1, 3017.7], [2653.4, 2067.7], [3204.4, 3256.3], [1387.0, 2066.2], [3523.1, 3650.2], [3689.6, 3118.7], [5457.1, 2364.8], [4095.3, 2548.4], [1706.3, 3063.3], [3222.0, 3652.9], [4377.6, 3370.1], [2227.7, 4499.3], [3313.0, 3223.5], [2830.5, 3814.0], [3029.7, 3471.0], [2177.6, 5558.0], [3503.0, 2671.7], [4094.1, 2499.4], [2757.8, 2269.5], [2894.1, 2441.4], [983.6, 4596.4], [1538.2, 4457.0], [1931.7, 1747.9], [2560.9, 3571.9], [3531.4, 2639.2], [1479.1, 2623.1], [3254.6, 2100.1], [2951.3, 2640.0], [3611.7, 4156.1], [2804.5, 3315.5], [4133.3, 3720.4], [3429.5, 2319.0], [4534.3, 3935.6], [2224.5, 3793.1], [5477.4, 3220.6], [2623.6, 3235.7], [3099.8, 3175.5], [2913.0, 3778.2], [3494.1, 2291.5], [2692.8, 5206.3], [2869.3, 3651.6], [2969.5, 5017.9], [3986.4, 2856.6], [2752.5, 2604.0], [1862.7, 3452.7], [3181.1, 1680.5], [2422.2, 2752.5], [2391.8, 3761.1], [3554.8, 2797.0], [2787.6, 1938.7], [1835.8, 3081.1], [2584.1, 3543.8], [1793.5, 2763.1], [3604.9, 1589.6], [1419.0, 2693.0], [3329.8, 3677.6], [3679.6, 4427.0], [3123.1, 3940.5], [3975.5, 1989.0], [2718.5, 4686.1], [2177.6, 3731.6], [1542.0, 2788.9], [3305.7, 3263.8], [2564.3, 3826.8], [2536.7, 2161.7], [3172.5, 1976.5], [3992.8, 3817.8], [4231.1, 2376.8], [2581.2, 3605.0], [3211.1, 2621.1], [3222.7, 1597.7], [3364.0, 2858.8], [3869.2, 2765.6], [2179.1, 4901.5], [3057.3, 2768.0], [3509.9, 2965.9], [3096.3, 3904.1], [2313.1, 2366.4], [1362.3, 2113.5], [2963.9, 3566.3], [3291.1, 3273.3], [3443.4, 3678.6], [2736.9, 3285.1], [2132.4, 1170.3], [3668.8, 2347.6], [3368.6, 3097.3], [3717.4, 3284.1], [4401.1, 3834.6], [1768.3, 2496.2], [3034.9, 5235.2], [4575.7, 2126.6], [3031.6, 3233.3], [2605.9, 3382.2], [2090.9, 3675.9], [3314.3, 3941.9], [3415.5, 2292.4], [4325.1, 3436.5], [3037.7, 3656.8], [2680.8, 1999.2], [4145.5, 2766.4], [1894.8, 2598.0], [4648.7, 3642.1], [2851.4, 641.7], [3758.7, 2974.6], [2607.0, 1247.7], [2148.8, 2574.1], [4121.8, 2459.7], [3104.4, 2791.8], [2688.7, 3185.9], [2350.3, 3486.2], [3092.0, 3845.4], [3882.5, 3100.2], [3232.5, 2844.8], [1182.3, 5080.3], [2515.9, 5078.2], [2040.6, 3257.3], [3001.7, 2318.1], [1995.1, 3897.9], [898.7, 2403.2], [3050.5, 2358.4], [1748.7, 3064.9], [2166.9, 2241.1], [3574.3, 3667.1], [3041.1, 2459.6], [3150.9, 3222.4], [3496.8, 1833.4], [2427.7, 3423.7], [4239.1, 2827.3], [1439.9, 4169.3], [4187.6, 3774.6], [3563.0, 2284.4], [2192.6, 3801.3], [3583.0, 4824.3], [2837.5, 4128.2], [3435.0, 2695.7], [2508.6, 4405.2], [3831.8, 1386.5], [3373.1, 3282.7], [3175.9, 1357.0], [3155.1, 2134.1], [3996.9, 1110.0], [2564.5, 2810.9], [3984.4, 3152.3], [4226.2, 3031.6], [3226.6, 3433.8], [2546.4, 4703.4], [2698.6, 4209.9], [2201.8, 3244.0], [2243.6, 3013.4], [3951.4, 2164.3], [3099.8, 2438.4], [2045.0, 1365.0], [3303.9, 5064.9], [4350.6, 3528.0], [2899.1, 1548.8], [2251.7, 2464.0], [3394.4, 2537.5], [4047.2, 5229.2], [3898.2, 2514.6], [2544.9, 3116.9], [1335.8, 2262.4], [3837.7, 4270.9], [3930.4, 2962.4], [3565.7, 3072.5], [2227.5, 2714.5], [2468.0, 3238.9], [2854.1, 1976.7], [4014.7, 3902.2], [3976.0, 3074.4], [3266.1, 4392.5], [3119.9, 2296.7], [4166.0, 2579.1], [3992.3, 2404.7], [2738.9, 2086.4], [3928.8, 2519.1], [2934.0, 3892.9], [2099.3, 2788.8], [2296.7, 3417.4], [3008.1, 3521.9], [3469.2, 3152.4], [3033.1, 1977.2], [1764.1, 3710.5], [3157.0, 1870.4], [3275.3, 3117.5], [4267.0, 4044.1], [2901.9, 2655.0], [4617.8, 1174.2], [2245.1, 3491.4], [4002.5, 4111.0], [4483.1, 2775.8], [4138.1, 1947.1], [3094.9, 3934.1], [4512.6, 3240.0], [2277.4, 2858.5], [3141.8, 4479.4], [1784.1, 3201.6], [2540.9, 3749.3], [3580.7, 4100.9], [3727.1, 4704.3], [3295.1, 2262.8], [1934.3, 3203.9], [4485.3, 3129.6], [1724.7, 4504.6], [2029.0, 1925.2], [3419.9, 2517.4], [2735.1, 3731.5], [3006.6, 3834.3], [1889.8, 3108.1], [2691.7, 2722.1], [3228.2, 4824.0], [2060.9, 3415.2], [2529.0, 4155.6], [2417.6, 567.0], [4701.8, 3958.8], [2396.0, 4332.0], [2964.3, 4421.7], [3935.0, 4276.9], [2721.4, 4475.2], [2473.5, 3649.7], [2909.1, 3621.2], [3008.6, 3274.8], [3682.4, 3726.5], [2675.4, 3057.0], [3394.0, 3970.1], [2616.4, 2673.8], [3401.6, 1888.3], [2785.7, 3148.4], [1930.9, 2654.8], [3877.4, 3373.0], [2556.9, 3689.4], [3710.1, 5390.8], [1892.5, 3329.9], [2921.7, 2880.4], [3293.6, 2823.4], [3356.0, 3250.7], [3583.9, 1913.7], [3161.4, 3868.7], [2532.4, 1850.8], [1365.0, 1647.7], [2503.6, 4416.5], [3209.3, 3681.2], [2347.2, 3943.4], [2822.9, 2882.3], [4280.9, 3605.8], [1382.4, 2760.8], [3686.9, 3974.7], [2473.5, 1253.5], [2401.4, 3895.4], [2032.0, 3885.1], [1797.8, 2845.8], [2001.1, 2412.4], [2456.5, 2400.9], [3865.3, 3229.9], [977.6, 4142.5], [2757.5, 3711.3], [1679.7, 4021.5], [3104.3, 1876.4], [3302.1, 3734.9], [3270.9, 2982.2], [3044.6, 1629.3], [1208.5, 3629.3], [1236.4, 403.7], [2818.6, 2815.1], [603.8, 3942.2], [3633.9, 4291.6], [2442.1, 1208.3], [2507.1, 3040.8], [2174.5, 1912.5], [3347.5, 2171.8], [3393.3, 2455.2], [3563.5, 3220.8], [1606.6, 3271.4], [2814.9, 2287.4], [2463.9, 2812.7], [4584.0, 3047.8], [3067.5, 3305.8], [1507.3, 2829.7], [3783.2, 2397.5], [2018.8, 2366.0], [2951.5, 2792.2], [4676.9, 3104.4], [2077.1, 4764.7], [3726.3, 47.4], [3388.5, 3493.8], [4190.2, 423.4], [3838.2, 5326.5], [3659.9, 2817.8], [2606.9, 3128.5], [4247.8, 4104.1], [3199.8, 4302.2], [2442.4, 2657.3], [3912.8, 2848.3], [2744.4, 5220.6], [2712.0, 3331.7], [4117.2, 3593.1], [3637.8, 1554.5], [3982.7, 5453.7], [2025.9, 3491.3], [3291.3, 4520.0], [1997.6, 2913.9], [2036.7, 3892.2], [3092.5, 2650.1], [3341.2, 2344.6], [2881.2, 2130.7], [4614.5, 1676.0], [3953.0, 1451.2], [3683.5, 4302.4], [3224.5, 3356.1], [3875.7, 3758.3], [3884.3, 3273.5], [2427.0, 1723.5], [3753.8, 2102.6], [2656.3, 1342.3], [1953.0, 1178.0], [2373.4, 2643.1], [2080.6, 2267.4]]}, "grandAvg": 2361.46};
+const S = D.shows, C = D.corr;
+const fm = n => n.toLocaleString('en-US',{maximumFractionDigits:0});
+const f2 = n => (Math.abs(n)<0.005 ? '' : n>0 ? '' : '\u2212') + Math.abs(n).toFixed(2);
+const f3 = n => (n>=0?'':'−') + Math.abs(n).toFixed(3);
+const el = id => document.getElementById(id);
+
+/* ---- diverging colour: teal (neg) -> neutral -> netflix red (pos) ---- */
+function heatColor(r){
+  const t = Math.min(1, Math.abs(r));
+  const e = Math.pow(t, 0.55);                 // lift weak values out of the floor
+  const base=[38,38,38];
+  const end = r>=0 ? [229,9,20] : [0,194,168];
+  const c = base.map((b,i)=>Math.round(b+(end[i]-b)*e));
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+const textOn = r => Math.abs(r)>0.45 ? '#fff' : '#9a9a9a';
+/* colour for a number printed on a dark surface: keeps weak values legible */
+function valColor(r){
+  const t=Math.min(1,Math.abs(r)), e=0.35+0.65*Math.pow(t,0.5);
+  const base=[150,150,150], end = r>=0 ? [255,107,115] : [0,194,168];
+  const c=base.map((b,i)=>Math.round(b+(end[i]-b)*e));
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+
+/* ---- KPIs ---- */
+let pairs=[];
+for(let i=0;i<S.length;i++) for(let j=i+1;j<S.length;j++) pairs.push({a:S[i],b:S[j],r:C[i][j]});
+pairs.sort((x,y)=>y.r-x.r);
+const strong = pairs.filter(p=>p.r>0.8);
+el('kpis').innerHTML = [
+  [fm(D.nClean),'Rows analysed'],
+  [fm(D.nSubs),'Subscribers'],
+  [S.length,'Titles'],
+  [strong.length,'Strong pairs (r &gt; 0.8)']
+].map(([v,l])=>`<div class="kpi"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('');
+el('nsub2').textContent = fm(D.nSubs);
+el('nsub3').textContent = fm(D.nSubs);
+el('footN').textContent = `${fm(D.nClean)} cleaned rows · ${fm(D.nSubs)} subscribers · ${S.length} titles`;
+
+/* ---- recommender ---- */
+let sel = 'Stranger Things';
+el('picker').innerHTML = S.map(s=>`<button class="chip" data-s="${s}">${s}</button>`).join('');
+el('picker').addEventListener('click', e=>{
+  const b = e.target.closest('.chip'); if(b) render(b.dataset.s);
+});
+
+function render(show){
+  sel = show; const i = S.indexOf(show);
+  document.querySelectorAll('#picker .chip').forEach(c=>c.setAttribute('aria-pressed', c.dataset.s===show));
+  const d = D.desc.find(x=>x.show===show);
+  el('seed').innerHTML = `<div class="k">Now watching</div><div class="n">${show}</div>
+    <dl><dt>Avg watch time</dt><dd>${fm(d.avg)} min</dd>
+        <dt>Avg episodes</dt><dd>${d.avgEp}</dd>
+        <dt>Episode length</dt><dd>${d.epLen} min</dd>
+        <dt>Subscribers</dt><dd>${fm(d.viewers)}</dd></dl>`;
+
+  const list = S.map((s,j)=>({s, r:C[i][j], j})).filter(x=>x.j!==i).sort((a,b)=>b.r-a.r);
+  el('recs').innerHTML = list.map((x,k)=>{
+    const strongP = x.r>0.8, w = Math.min(50, Math.abs(x.r)*50);
+    const bar = `<i style="${x.r>=0?`left:50%;width:${w}%`:`right:50%;left:auto;width:${w}%`};background:${heatColor(x.r)}"></i>`;
+    const why = strongP ? 'Watch time rises almost in step — strong recommendation'
+              : x.r>0.3 ? 'Some shared audience behaviour'
+              : Math.abs(x.r)<0.06 ? 'No measurable relationship'
+              : x.r<0 ? 'Slight inverse pull — audiences lean apart' : 'Weak signal';
+    return `<div class="rec ${k===0&&strongP?'top':''}">
+      <div class="rank">${k+1}</div>
+      <div class="body"><div class="nm">${x.s}</div><div class="why">${why}</div></div>
+      <div class="bar">${bar}</div>
+      <div class="val" style="color:${valColor(x.r)}">${f3(x.r)}</div>
+      <span class="verdict ${strongP?'v-strong':'v-none'}">${strongP?'RECOMMEND':'SKIP'}</span></div>`;
+  }).join('');
+
+  const fam = list.filter(x=>x.r>0.8).map(x=>x.s);
+  el('seedExtra').innerHTML = fam.length
+    ? `<div class="eyebrow" style="margin-bottom:6px">Viewing cluster</div>
+       <p style="font-size:12.5px;color:var(--tx2);margin:0 0 10px">“${show}” sits in a cluster of
+          ${fam.length+1} titles whose watch time rises and falls together.</p>
+       ${[show,...fam].map(f=>`<span class="pill ${f===show?'red':''}">${f}</span>`).join('')}
+       <p style="font-size:12px;color:var(--tx3);margin:10px 0 0">Promote within the cluster; everything else
+          scores as noise.</p>`
+    : `<div class="eyebrow" style="margin-bottom:6px">Viewing cluster</div>
+       <p style="font-size:12.5px;color:var(--tx2);margin:0">“${show}” belongs to no cluster — no other title
+          clears r&nbsp;&gt;&nbsp;0.8 against it. Fall back to the average-watch-time ranking below.</p>`;
+
+  const best = list[0];
+  el('recfoot').textContent = best.r>0.8
+    ? `Recommend “${best.s}” to ${show} viewers — r = ${f3(best.r)} across ${fm(D.nSubs)} subscribers.`
+    : `No title clears the r > 0.8 bar for “${show}”; fall back to popularity-based promotion.`;
+
+  document.querySelectorAll('#heat tr').forEach(tr=>tr.classList.toggle('hi', tr.dataset.s===show));
+}
+
+/* ---- heatmap ---- */
+(function(){
+  let h = '<thead><tr><th></th>' + S.map(s=>`<th class="colh"><div>${s}</div></th>`).join('') + '</tr></thead><tbody>';
+  S.forEach((rs,i)=>{
+    h += `<tr data-s="${rs}"><th class="rowh"><button class="chip" style="background:none;border:0;padding:0;color:inherit;font:inherit;cursor:pointer" data-s="${rs}">${rs}</button></th>`;
+    S.forEach((cs,j)=>{
+      const r = C[i][j];
+      h += i===j ? `<td class="diag" title="${rs}">1.00</td>`
+        : `<td style="background:${heatColor(r)};color:${textOn(r)}" title="${rs} vs ${cs}: r = ${r.toFixed(4)}">${f2(r)}</td>`;
+    });
+    h += '</tr>';
+  });
+  el('heat').innerHTML = h + '</tbody>';
+  el('heat').addEventListener('click', e=>{ const b=e.target.closest('[data-s]'); if(b&&b.dataset.s) render(b.dataset.s); });
+})();
+
+/* ---- descriptive tables ---- */
+function descTable(node, full){
+  const cols = full
+    ? [['show','Show',0],['avg','Avg',1],['median','Median',1],['sd','Std dev',1],['min','Min',1],['max','Max',1],['viewers','Subscribers',1]]
+    : [['show','Show',0],['avg','Avg watch time (min)',1],['avgEp','Avg episodes',1],['epLen','Ep length (min)',1],['viewers','Subscribers',1]];
+  node.innerHTML = '<thead><tr>'+cols.map(c=>`<th class="${c[2]?'num':''}">${c[1]}</th>`).join('')+'</tr></thead><tbody>'
+    + D.desc.map(d=>'<tr>'+cols.map(c=>`<td class="${c[2]?'num':''}">${c[2]?fm(d[c[0]]):d[c[0]]}</td>`).join('')+'</tr>').join('')
+    + `<tr style="font-weight:700"><td>Grand total</td><td class="num">${fm(D.grandAvg)}</td>`
+    + '<td class="num" colspan="'+(cols.length-2)+'"></td></tr></tbody>';
+}
+descTable(el('descT'), false);
+descTable(el('descT2'), true);
+el('grandAvg').textContent = fm(D.grandAvg);
+
+/* ---- page 2 tables ---- */
+el('cleanPills').innerHTML =
+  `<span class="pill">${fm(D.nRows)} raw rows</span>
+   <span class="pill red">− ${fm(D.issues.blank)} incomplete rows removed</span>
+   <span class="pill tl">${fm(D.nClean)} rows kept</span>
+   <span class="pill">${fm(D.nSubs)} subscribers × ${S.length} shows</span>`;
+
+el('rawT').innerHTML = '<thead><tr><th>Subscriber ID</th><th>Show Name</th><th class="num">Episodes Watched</th>'
+  + '<th class="num">Episode Length (m)</th><th class="num">Total Watch Time</th></tr></thead><tbody>'
+  + D.rawHead.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td class="num">${r[2].toFixed(2)}</td>`
+      +`<td class="num">${r[3]}</td><td class="num" style="color:var(--accent)">${fm(r[4])}</td></tr>`).join('')
+  + '</tbody>';
+
+el('pivT').innerHTML = '<thead><tr><th>Subscriber</th>'+S.map(s=>`<th class="num">${s}</th>`).join('')+'</tr></thead><tbody>'
+  + D.pivotHead.map(r=>'<tr><td>'+r[0]+'</td>'+r.slice(1).map(v=>`<td class="num">${fm(v)}</td>`).join('')+'</tr>').join('')
+  + '</tbody>';
+
+const pairTable = (node, rows) => node.innerHTML =
+  '<thead><tr><th>Pair</th><th class="num">r</th></tr></thead><tbody>'
+  + rows.map(p=>`<tr><td>${p.a} <span style="color:var(--tx3)">&amp;</span> ${p.b}</td>`
+      + `<td class="num" style="color:${valColor(p.r)};font-weight:700">${f3(p.r)}</td></tr>`).join('')
+  + '</tbody>';
+pairTable(el('strongT'), strong);
+pairTable(el('weakT'), pairs.slice().sort((a,b)=>Math.abs(a.r)-Math.abs(b.r)).slice(0,strong.length||5));
+
+/* ---- scatter plots ---- */
+function scatter(id, sp){
+  const W=520,H=400,L=62,R=16,T=34,B=52;
+  const xs=sp.pts.map(p=>p[0]), ys=sp.pts.map(p=>p[1]);
+  const nice = v => { const p=Math.pow(10,Math.floor(Math.log10(v))); return Math.ceil(v/p)*p; };
+  const xM=nice(Math.max(...xs)), yM=nice(Math.max(...ys));
+  const px=v=>L+(v/xM)*(W-L-R), py=v=>H-B-(v/yM)*(H-T-B);
+  let g='';
+  for(let k=0;k<=4;k++){
+    const gy=H-B-k*(H-T-B)/4, gx=L+k*(W-L-R)/4;
+    g+=`<line x1="${L}" y1="${gy}" x2="${W-R}" y2="${gy}" stroke="#262626" stroke-width="1"/>`
+     + `<line x1="${gx}" y1="${T}" x2="${gx}" y2="${H-B}" stroke="#1c1c1c" stroke-width="1"/>`
+     + `<text x="${L-8}" y="${gy+4}" fill="#7A7A7A" font-size="10" text-anchor="end">${fm(yM*k/4)}</text>`
+     + `<text x="${gx}" y="${H-B+16}" fill="#7A7A7A" font-size="10" text-anchor="middle">${fm(xM*k/4)}</text>`;
+  }
+  const dots = sp.pts.map(p=>`<circle cx="${px(p[0]).toFixed(1)}" cy="${py(p[1]).toFixed(1)}" r="1.9"/>`).join('');
+  // least-squares trend line
+  const n=xs.length, mx=xs.reduce((a,b)=>a+b)/n, my=ys.reduce((a,b)=>a+b)/n;
+  let num=0,den=0; for(let k=0;k<n;k++){num+=(xs[k]-mx)*(ys[k]-my);den+=(xs[k]-mx)**2;}
+  const m=num/den, c=my-m*mx;
+  const y0=Math.max(0,Math.min(yM,c)), y1=Math.max(0,Math.min(yM,m*xM+c));
+  const x0=(y0-c)/m, x1=(y1-c)/m;
+  const strongP = Math.abs(sp.r)>0.5;
+  el(id).innerHTML = `
+    <rect width="${W}" height="${H}" fill="#0d0d0d"/>
+    ${g}
+    <g fill="${strongP?'rgba(229,9,20,.55)':'rgba(0,194,168,.45)'}">${dots}</g>
+    <line x1="${px(x0)}" y1="${py(y0)}" x2="${px(x1)}" y2="${py(y1)}"
+          stroke="#fff" stroke-width="1.6" stroke-dasharray="5 4" opacity=".75"/>
+    <text x="${L}" y="20" fill="#F5F5F5" font-size="12.5" font-weight="700">${sp.y} vs ${sp.x}</text>
+    <text x="${W-R}" y="20" fill="${strongP?'#FF6B73':'#00C2A8'}" font-size="12.5" font-weight="700"
+          text-anchor="end">r = ${f3(sp.r)}</text>
+    <text x="${(L+W-R)/2}" y="${H-12}" fill="#7A7A7A" font-size="10.5" text-anchor="middle">${sp.x} — total watch time (min)</text>
+    <text transform="translate(15 ${(T+H-B)/2}) rotate(-90)" fill="#7A7A7A" font-size="10.5" text-anchor="middle">${sp.y} (min)</text>`;
+}
+scatter('sc1', D.scatterA);
+scatter('sc2', D.scatterB);
+
+/* ---- conclusion ---- */
+const clusters = [];
+const seen = new Set();
+strong.forEach(p=>{
+  let hit = clusters.find(c=>c.has(p.a)||c.has(p.b));
+  if(!hit){ hit=new Set(); clusters.push(hit); }
+  hit.add(p.a); hit.add(p.b); seen.add(p.a); seen.add(p.b);
+});
+el('conclusion').innerHTML =
+  `<p>Of the ${pairs.length} possible show pairs, <strong>${strong.length}</strong> clear the r &gt; 0.8 threshold.
+   They fall into <strong>${clusters.length}</strong> distinct viewing ${clusters.length===1?'cluster':'clusters'}:</p>`
+  + clusters.map((c,k)=>`<p><span class="pill red">Cluster ${k+1}</span> ${[...c].join(' · ')}</p>`).join('')
+  + `<p>Everything outside these clusters sits within roughly ±0.05 of zero — indistinguishable from
+     no relationship at this sample size. The practical rule: recommend <em>within</em> a cluster, and fall back to
+     the average-watch-time ranking for the ${S.length-seen.size} title${S.length-seen.size===1?'':'s'} that belong to none.</p>`;
+
+/* ---- nav ---- */
+document.querySelector('nav').addEventListener('click', e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  document.querySelectorAll('nav button').forEach(x=>x.setAttribute('aria-selected', x===b));
+  document.querySelectorAll('.page').forEach(p=>p.classList.toggle('on', p.id===b.dataset.page));
+  window.scrollTo({top:0,behavior:'smooth'});
+});
+
+render(sel);
+
+</script>
+</body>
+</html>
