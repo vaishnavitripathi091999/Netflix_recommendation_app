@@ -3,511 +3,800 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Show Affinity Analysis</title>
+<meta name="description" content="Interactive show recommender: pick a title and see which other shows its viewers watch, from a sample viewing dataset.">
+<title>Show Affinity Dashboard</title>
 <style>
 :root{
-  --red:#D22630; --red-deep:#8E1A21; --black:#000;
-  --s0:#0A0A0A; --s1:#141414; --s2:#1C1C1C; --s3:#262626; --s4:#333;
-  --tx:#F5F5F5; --tx2:#B3B3B3; --tx3:#7A7A7A;
-  --accent:#00C2A8;
-  --ff:'Helvetica Neue',Helvetica,Arial,sans-serif;
+  color-scheme: dark;
+  --brand:#E50914;
+  --brand-ink:#0A0A0B;
+  --surface-0:#0B0B0C;
+  --surface-1:#151517;
+  --surface-2:#1E1E21;
+  --line:#2C2C31;
+  --line-strong:#43434A;
+  --text-1:#F5F4F6;
+  --text-2:#C0BEC6;
+  --text-3:#8D8B94;
+  --mark:#FF3B47;
+  --mark-dim:#3A3A40;
+  --pos-1:#3D070A;--pos-2:#700C14;--pos-3:#A5141F;--pos-4:#CE1C28;--pos-5:#E5252F;
+  --neg-1:#06322C;--neg-2:#0A5348;--neg-3:#0F7767;--neg-4:#159683;--neg-5:#1BB59E;
+  --seq-0:#242428;
+  --grid:#232327;
+  --shadow:0 1px 2px rgba(0,0,0,.5), 0 2px 14px rgba(0,0,0,.35);
+  --radius:14px;
+  --focus:#E50914;
+  --ff:"Inter","Helvetica Neue",Helvetica,Arial,system-ui,sans-serif;
 }
 *{box-sizing:border-box}
-html,body{margin:0;padding:0}
-body{background:var(--black);color:var(--tx);font-family:var(--ff);-webkit-font-smoothing:antialiased;line-height:1.5}
-.wrap{max-width:1180px;margin:0 auto;padding:0 16px}
+html{background:var(--surface-0)}
+body{margin:0;background:var(--surface-0);color:var(--text-1);font:400 14px/1.45 var(--ff);-webkit-font-smoothing:antialiased}
+h1,h2,h3{margin:0;font-weight:600;letter-spacing:-.01em}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px;border-radius:6px}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.skip{position:absolute;left:12px;top:-48px;z-index:60;background:var(--brand);color:#fff;padding:10px 16px;border-radius:8px;font-weight:600;transition:top .15s;text-decoration:none}
+.skip:focus{top:12px}
+.wrap{max-width:1560px;margin:0 auto;padding-inline:16px;padding-block:0 40px}
 
-/* ---------- header ---------- */
-header{background:linear-gradient(180deg,#000 0%,#0d0d0d 100%);border-bottom:1px solid var(--s3);position:sticky;top:0;z-index:50}
-.hd{display:flex;align-items:center;gap:16px;padding:14px 0;flex-wrap:wrap}
-.logo{height:34px;width:auto;display:block;flex:none}
-.hd-t{flex:1;min-width:180px}
-.hd-t h1{margin:0;font-size:19px;font-weight:700;letter-spacing:-.2px}
-.hd-t p{margin:2px 0 0;font-size:12px;color:var(--tx3);letter-spacing:.06em;text-transform:uppercase}
-nav{display:flex;gap:4px;background:var(--s1);padding:4px;border-radius:999px;border:1px solid var(--s3)}
-nav button{font:inherit;font-size:13px;font-weight:600;color:var(--tx2);background:none;border:0;padding:8px 18px;border-radius:999px;cursor:pointer;transition:.15s;white-space:nowrap}
-nav button:hover{color:var(--tx)}
-nav button[aria-selected="true"]{background:var(--red);color:#fff}
+header.top{background:var(--brand-ink);border-bottom:3px solid var(--brand)}
+.top-in{max-width:1560px;margin:0 auto;padding:15px 16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.wordmark{font-size:27px;font-weight:800;color:var(--brand);letter-spacing:-.9px;line-height:1;flex:none}
+.titles{min-width:0;flex:1 1 260px}
+.titles h1{font-size:19px;color:#fff;line-height:1.2}
+.titles p{margin:3px 0 0;font-size:12.5px;color:var(--text-3);letter-spacing:.02em}
+.top-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.pill{font-size:12px;color:var(--text-2);background:rgba(255,255,255,.06);border:1px solid var(--line-strong);
+  padding:5px 11px;border-radius:999px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.viewtabs{display:inline-flex;background:rgba(255,255,255,.05);border:1px solid var(--line-strong);border-radius:999px;padding:3px;gap:3px}
+.viewtabs button{font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;background:none;border:0;color:var(--text-2);padding:6px 15px;border-radius:999px;transition:.15s}
+.viewtabs button:hover{color:var(--text-1)}
+.viewtabs button[aria-selected="true"]{background:var(--brand);color:#fff}
 
-/* ---------- generic ---------- */
-.page{display:none;padding:28px 0 64px}
-.page.on{display:block}
-.caption{font-size:13px;color:var(--tx2);max-width:78ch;margin:0 0 22px}
-.card{background:var(--s1);border:1px solid var(--s3);border-radius:10px;padding:20px;margin-bottom:20px}
-.card>h2{margin:0 0 4px;font-size:16px;font-weight:700;letter-spacing:-.1px}
-.card>h2+.sub{margin:0 0 18px;font-size:12.5px;color:var(--tx3)}
-.eyebrow{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--red);margin-bottom:8px}
-.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px}
+.disclaimer{margin:16px 0 0;padding:9px 14px;font-size:12px;line-height:1.5;color:var(--text-3);
+  background:var(--surface-1);border:1px solid var(--line);border-left:3px solid var(--line-strong);border-radius:10px}
+
+
+/* ---------- section label ---------- */
+.sectionlbl{margin:34px 0 0;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text-3)}
+.sectionlbl::after{content:"";display:block;height:1px;background:var(--line);margin-top:10px}
+
+/* ---------- hero ---------- */
+.hero{background:var(--surface-1);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);
+  padding:22px 22px 20px;margin-top:18px;position:relative;overflow:hidden}
+.hero::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;
+  background:linear-gradient(90deg,var(--brand),#7D040B 60%,transparent)}
+.hero-hd{display:flex;gap:20px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;margin-bottom:16px}
+.hero-hd h2{font-size:21px;color:#fff;letter-spacing:-.02em}
+.hero-hd p{margin:6px 0 0;font-size:13px;color:var(--text-3);max-width:62ch}
+.aud{display:flex;align-items:center;gap:9px;flex:none}
+.audlbl{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-3)}
+
+.picker{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+.pchip{font:inherit;font-size:13px;font-weight:600;cursor:pointer;background:var(--surface-2);color:var(--text-2);
+  border:1px solid var(--line-strong);padding:9px 15px;border-radius:9px;transition:.14s}
+.pchip:hover{border-color:var(--brand);color:#fff}
+.pchip[aria-pressed="true"]{background:var(--brand);border-color:var(--brand);color:#fff;
+  box-shadow:0 0 0 3px rgba(229,9,20,.18)}
+
+.heroGrid{display:grid;grid-template-columns:270px minmax(0,1fr);gap:18px;align-items:stretch}
+.seedCard{background:linear-gradient(155deg,#B00710,#5C0308);border:1px solid #7D0A10;border-radius:14px;
+  padding:18px;display:flex;flex-direction:column;min-width:0}
+.seedCard .k{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.72)}
+.seedCard .n{font-size:25px;font-weight:700;line-height:1.14;margin:7px 0 15px;letter-spacing:-.3px;color:#fff}
+.seedCard dl{margin:0;display:grid;grid-template-columns:1fr auto;gap:8px 10px;font-size:12.5px;
+  border-top:1px solid rgba(255,255,255,.18);padding-top:13px}
+.seedCard dt{color:rgba(255,255,255,.75)}
+.seedCard dd{margin:0;text-align:right;font-weight:700;font-variant-numeric:tabular-nums;color:#fff}
+
+.recZone{display:flex;flex-direction:column;min-width:0}
+.reclbl{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3);margin-bottom:10px}
+.reclbl b{color:var(--mark)}
+.recCards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;flex:1 1 auto;align-content:start}
+.recCard{background:var(--surface-2);border:1px solid var(--line-strong);border-radius:12px;padding:14px 15px;
+  cursor:pointer;transition:.14s;text-align:left;font:inherit;display:flex;flex-direction:column;gap:9px;min-width:0}
+.recCard:hover{border-color:var(--brand);background:#232326;transform:translateY(-2px)}
+.recCard .rank{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-3)}
+.recCard .nm{font-size:16px;font-weight:700;color:#fff;line-height:1.2;overflow-wrap:anywhere}
+.recCard .r{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--mark);line-height:1}
+.recCard .meter{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.recCard .meter i{display:block;height:100%;border-radius:3px;background:var(--brand)}
+.recCard .why{font-size:11.5px;color:var(--text-3);line-height:1.4}
+.recNone{background:var(--surface-2);border:1px dashed var(--line-strong);border-radius:12px;padding:18px;
+  font-size:13px;color:var(--text-3);grid-column:1/-1}
+.recRest{margin:12px 0 0;font-size:12px;color:var(--text-3);line-height:1.6;border-top:1px solid var(--line);padding-top:11px}
+.recRest b{color:var(--text-2);font-weight:600}
+.recRest button{font:inherit;font-size:12px;background:none;border:0;color:var(--text-2);cursor:pointer;padding:0 2px;
+  text-decoration:underline;text-decoration-color:var(--line-strong);text-underline-offset:3px}
+.recRest button:hover{color:#fff;text-decoration-color:var(--brand)}
+
+.kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin:14px 0 0;padding:0}
+.kpi{background:var(--surface-1);border:1px solid var(--line);border-left:3px solid var(--brand);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:13px 14px 12px;min-width:0}
+.kpi dt{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);margin:0 0 7px;line-height:1.3}
+.kpi .val{font-size:29px;font-weight:650;line-height:1;letter-spacing:-.025em;font-variant-numeric:tabular-nums;display:block;color:#fff}
+.kpi .sub{margin-top:7px;font-size:12px;color:var(--text-3);display:block}
+
+#card-matrix{margin-top:12px}
+.board{display:grid;gap:12px;margin-top:12px;grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch}
+#card-records{grid-column:1/-1;margin-top:0}
+.card{background:var(--surface-1);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);
+  padding:14px 15px 12px;display:flex;flex-direction:column;min-width:0}
+.card-hd{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.card-hd h2{font-size:14.5px;flex:1 1 auto;min-width:0;color:#fff}
+.card-hd .hint{display:block;font-weight:400;font-size:11.5px;color:var(--text-3);margin-top:3px;letter-spacing:0}
+.ctrls{display:flex;gap:6px;align-items:center;flex:none;flex-wrap:wrap}
+.seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:2px;gap:2px}
+.seg button{font:inherit;font-size:11.5px;font-weight:600;cursor:pointer;background:none;border:0;color:var(--text-3);padding:4px 9px;border-radius:6px}
+.seg button:hover{color:var(--text-1)}
+.seg button[aria-pressed="true"]{background:var(--brand);color:#fff}
+select.mini{font:inherit;font-size:12px;font-weight:600;background:var(--surface-2);color:var(--text-1);
+  border:1px solid var(--line-strong);border-radius:8px;padding:5px 8px;cursor:pointer;max-width:150px}
+.tblbtn{font:inherit;font-size:11.5px;font-weight:600;cursor:pointer;background:var(--surface-2);border:1px solid var(--line-strong);
+  color:var(--text-2);border-radius:8px;padding:5px 9px}
+.tblbtn:hover{color:var(--text-1)}
+.tblbtn[aria-expanded="true"]{background:var(--brand);color:#fff;border-color:var(--brand)}
+.plot{position:relative;flex:1 1 auto;min-height:0}
+.plot>svg.chartsvg{position:absolute;inset:0;width:100%;height:100%;display:block;overflow:visible}
+.empty{position:absolute;inset:0;display:grid;place-items:center;font-size:13px;color:var(--text-3);text-align:center;padding:20px}
+.empty[hidden]{display:none}
+
+.hmwrap{overflow:auto;flex:1 1 auto}
+table.hm{border-collapse:separate;border-spacing:3px;font-size:12px;margin:0 auto}
+table.hm th{font-weight:600;color:var(--text-2);font-size:11px;padding:3px 7px;white-space:nowrap}
+table.hm th.rowh{text-align:right;max-width:170px}
+table.hm th.rowh button{font:inherit;font-weight:600;background:none;border:0;padding:2px 4px;cursor:pointer;color:var(--text-2);border-radius:5px;text-align:right}
+table.hm th.rowh button:hover{color:var(--text-1);text-decoration:underline}
+table.hm th.rowh button[aria-pressed="true"]{color:var(--mark)}
+table.hm th.colh{height:112px;vertical-align:bottom;padding-bottom:7px}
+table.hm th.colh div{writing-mode:vertical-rl;transform:rotate(180deg);text-align:left}
+table.hm td{width:54px;height:38px;text-align:center;border-radius:5px;font-variant-numeric:tabular-nums;font-weight:600;font-size:11.5px;color:#fff}
+table.hm td:hover{outline:2px solid #fff;outline-offset:-2px}
+table.hm td.diag{background:var(--seq-0);color:var(--text-3)}
+table.hm td.b0{color:var(--text-3)}
+.legend{display:flex;align-items:center;gap:9px;margin-top:10px;font-size:11px;color:var(--text-3);flex-wrap:wrap}
+.legend .lgi{display:flex;align-items:center;gap:6px}
+.legend .sw{width:15px;height:15px;border-radius:4px;border:1px solid var(--line);flex:none}
+
+.tblwrap{margin-top:10px;border-top:1px solid var(--line);padding-top:8px;max-height:280px;overflow:auto}
+.tblwrap[hidden]{display:none}
+table.dt{width:100%;border-collapse:collapse;font-size:12.5px}
+table.dt caption{text-align:left;font-size:11.5px;color:var(--text-3);padding-bottom:6px}
+table.dt th,table.dt td{text-align:right;padding:5px 7px;border-bottom:1px solid var(--line);white-space:nowrap;font-variant-numeric:tabular-nums}
+table.dt th:first-child,table.dt td:first-child{text-align:left;white-space:normal}
+table.dt thead th{position:sticky;top:0;background:var(--surface-1);color:var(--text-3);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.05em;z-index:1}
+table.dt tbody tr:hover{background:rgba(255,255,255,.03)}
+.rowbtn{font:inherit;font-size:12.5px;background:none;border:0;padding:2px 4px;margin:-2px -4px;border-radius:6px;cursor:pointer;
+  color:var(--text-1);text-align:left;text-decoration:underline;text-decoration-color:var(--line-strong);text-underline-offset:3px}
+.rowbtn:hover{text-decoration-color:var(--brand)}
+.rowbtn[aria-pressed="true"]{font-weight:700}
+.rowbtn[aria-pressed="true"]::before{content:"\2713 ";color:var(--mark)}
+
+.chartsvg .grid{stroke:var(--grid);stroke-width:1;shape-rendering:crispEdges}
+.chartsvg .axis{stroke:var(--line-strong);stroke-width:1;shape-rendering:crispEdges}
+.chartsvg text{fill:var(--text-3);font-size:11px;font-family:var(--ff)}
+.chartsvg text.cat{fill:var(--text-2);font-size:12px}
+.chartsvg text.val{fill:var(--text-2);font-size:11.5px;font-weight:600;font-variant-numeric:tabular-nums}
+.chartsvg text.xlab{fill:var(--text-2);font-size:11.5px;font-weight:600}
+.chartsvg g.item{cursor:pointer}
+.chartsvg g.item rect{transition:opacity .12s}
+.chartsvg g.item:hover rect{opacity:.8}
+.chartsvg g.item:focus{outline:none}
+.chartsvg g.item:focus-visible rect{stroke:var(--focus);stroke-width:3}
+.chartsvg .trend{fill:none;stroke:#fff;stroke-width:1.6;stroke-dasharray:5 4;opacity:.65}
+.chartsvg .hit{fill:transparent}
+
+#card-records{margin-top:12px}
+.recwrap{max-height:400px;overflow:auto;border:1px solid var(--line);border-radius:10px}
+table.rec{width:100%;border-collapse:collapse;font-size:12.5px;min-width:820px}
+table.rec th,table.rec td{text-align:right;padding:7px 10px;border-bottom:1px solid var(--line);white-space:nowrap;font-variant-numeric:tabular-nums}
+table.rec th:first-child,table.rec td:first-child{text-align:left}
+table.rec thead th{position:sticky;top:0;background:var(--surface-2);color:var(--text-2);font-weight:600;font-size:11px;
+  text-transform:uppercase;letter-spacing:.05em;z-index:1;border-bottom:1px solid var(--line-strong)}
+table.rec tbody tr:nth-child(even){background:rgba(255,255,255,.022)}
+table.rec tbody tr:hover{background:rgba(229,9,20,.07)}
+.recfoot{margin-top:8px;font-size:12px;color:var(--text-3)}
+
+#tip{position:fixed;z-index:80;pointer-events:none;background:#000;color:#fff;border:1px solid var(--line-strong);
+  border-radius:9px;padding:8px 11px;font-size:12.5px;line-height:1.45;box-shadow:0 8px 26px rgba(0,0,0,.7);
+  max-width:270px;opacity:0;transition:opacity .1s}
+#tip[data-show="true"]{opacity:1}
+#tip .tt{font-weight:600;margin-bottom:3px}
+#tip .tr{color:var(--text-2);font-variant-numeric:tabular-nums}
+
+.view[hidden]{display:none}
+.steps{counter-reset:s}
+.step{position:relative;padding-left:52px;margin-bottom:24px}
+.step::before{counter-increment:s;content:counter(s);position:absolute;left:0;top:0;width:34px;height:34px;border-radius:50%;
+  background:var(--brand);color:#fff;display:grid;place-items:center;font-weight:700;font-size:15px}
+.step::after{content:"";position:absolute;left:16.5px;top:42px;bottom:-24px;width:1px;background:var(--line)}
+.step:last-child::after{display:none}
+.step h3{margin:5px 0 6px;font-size:15px;color:#fff}
+.step p{margin:0 0 10px;font-size:13.5px;color:var(--text-2);max-width:82ch}
+.formula{background:#000;border:1px solid var(--line);border-left:3px solid var(--mark);border-radius:8px;
+  padding:10px 13px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;color:var(--mark);
+  margin:9px 0;overflow-x:auto;white-space:pre}
+.mpill{display:inline-block;font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:999px;background:var(--surface-2);
+  border:1px solid var(--line-strong);color:var(--text-2);margin:0 6px 6px 0}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+.xlcap{font-size:11.5px;color:var(--text-3);margin-top:7px;font-style:italic}
+footer.note{margin-top:18px;font-size:12px;color:var(--text-3);line-height:1.6}
+footer.note strong{color:var(--text-2)}
 .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
 
-/* ---------- KPI ---------- */
-.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px}
-.kpi{background:var(--s1);border:1px solid var(--s3);border-radius:10px;padding:14px 16px;border-left:3px solid var(--red)}
-.kpi .v{font-size:25px;font-weight:700;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
-.kpi .l{font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:.08em;margin-top:2px}
-
-/* ---------- recommender ---------- */
-.pickrow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px}
-.chip{font:inherit;font-size:13px;font-weight:600;background:var(--s2);color:var(--tx2);border:1px solid var(--s4);
-      padding:9px 15px;border-radius:6px;cursor:pointer;transition:.15s}
-.chip:hover{border-color:var(--red);color:var(--tx)}
-.chip[aria-pressed="true"]{background:var(--red);border-color:var(--red);color:#fff}
-.recgrid{display:grid;grid-template-columns:320px minmax(0,1fr);gap:22px;align-items:start}
-.recgrid>*,.grid2>*{min-width:0}
-.seed{background:linear-gradient(145deg,var(--red-deep),#6d0409);border-radius:10px;padding:20px;border:1px solid #7a0a10}
-.seed .k{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;opacity:.75}
-.seed .n{font-size:26px;font-weight:700;line-height:1.15;margin:6px 0 16px;letter-spacing:-.4px}
-.seed dl{margin:0;display:grid;grid-template-columns:1fr auto;gap:7px 10px;font-size:12.5px}
-.seed dt{opacity:.8}
-.seed dd{margin:0;text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
-.rec{display:flex;align-items:center;gap:14px;padding:12px 14px;background:var(--s2);border:1px solid var(--s3);
-     border-radius:8px;margin-bottom:9px;transition:.15s}
-.rec:hover{border-color:var(--s4);transform:translateX(2px)}
-.rec .rank{width:26px;font-size:17px;font-weight:700;color:var(--tx3);font-variant-numeric:tabular-nums;flex:none}
-.rec.top .rank{color:var(--red)}
-.rec .body{flex:1;min-width:0}
-.rec .nm{font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis}
-.rec .why{font-size:11.5px;color:var(--tx3);margin-top:1px}
-.bar{width:130px;height:7px;background:var(--s4);border-radius:4px;overflow:hidden;flex:none;position:relative}
-.bar i{position:absolute;top:0;bottom:0;left:50%;display:block;border-radius:4px}
-.rec .val{width:62px;text-align:right;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;flex:none}
-.verdict{font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px;flex:none;letter-spacing:.04em}
-.v-strong{background:rgba(210,38,48,.18);color:#FF6B73}
-.v-none{background:var(--s3);color:var(--tx3)}
-
-/* ---------- heatmap ---------- */
-.hmwrap{overflow-x:auto;padding-bottom:6px}
-table.hm{border-collapse:separate;border-spacing:3px;font-size:12px}
-table.hm th{font-weight:600;color:var(--tx2);font-size:11.5px;padding:4px 8px;white-space:nowrap}
-table.hm th.rowh{text-align:right;max-width:170px}
-table.hm th.colh{height:118px;vertical-align:bottom;padding-bottom:8px}
-table.hm th.colh div{writing-mode:vertical-rl;transform:rotate(180deg);text-align:left}
-table.hm td{width:58px;height:42px;text-align:center;border-radius:4px;font-variant-numeric:tabular-nums;
-  font-weight:600;cursor:default;transition:.12s;font-size:11.5px}
-table.hm td:hover{outline:2px solid #fff;outline-offset:-2px}
-table.hm td.diag{background:var(--s4)!important;color:var(--tx3)!important}
-table.hm tr.hi th.rowh,table.hm td.hi{color:#fff}
-.legend{display:flex;align-items:center;gap:12px;margin-top:16px;font-size:11.5px;color:var(--tx3)}
-.scale{width:220px;height:11px;border-radius:3px;
-  background:linear-gradient(90deg,#00C2A8,#0e6b62,#2b2b2b,#8d1118,#D22630)}
-
-/* ---------- tables ---------- */
-table.dt{width:100%;border-collapse:collapse;font-size:12.5px}
-table.dt th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--tx3);
-  padding:8px 10px;border-bottom:1px solid var(--s4);font-weight:700;white-space:nowrap}
-table.dt td{padding:8px 10px;border-bottom:1px solid var(--s2);font-variant-numeric:tabular-nums;white-space:nowrap}
-table.dt tbody tr:hover{background:var(--s2)}
-table.dt td.num,table.dt th.num{text-align:right}
-.tscroll{overflow-x:auto}
-
-/* ---------- methodology ---------- */
-.steps{counter-reset:s}
-.step{position:relative;padding-left:56px;margin-bottom:26px}
-.step::before{counter-increment:s;content:counter(s);position:absolute;left:0;top:0;width:36px;height:36px;
-  border-radius:50%;background:var(--red);color:#fff;display:grid;place-items:center;font-weight:700;font-size:16px}
-.step::after{content:"";position:absolute;left:17.5px;top:44px;bottom:-26px;width:1px;background:var(--s4)}
-.step:last-child::after{display:none}
-.step h3{margin:6px 0 6px;font-size:16px;font-weight:700}
-.step p{margin:0 0 12px;font-size:13.5px;color:var(--tx2);max-width:80ch}
-.formula{background:#0d0d0d;border:1px solid var(--s3);border-left:3px solid var(--accent);border-radius:6px;
-  padding:11px 14px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;
-  color:var(--accent);margin:10px 0;overflow-x:auto;white-space:pre}
-.note{font-size:12px;color:var(--tx3);border-left:2px solid var(--s4);padding-left:12px;margin:10px 0}
-.pill{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;
-  background:var(--s3);color:var(--tx2);margin:0 6px 6px 0}
-.pill.red{background:rgba(210,38,48,.15);color:#FF6B73}
-.pill.tl{background:rgba(0,194,168,.13);color:var(--accent)}
-.xlcap{font-size:11px;color:var(--tx3);margin-top:8px;font-style:italic}
-.xlbar{display:flex;align-items:center;gap:7px;background:var(--s3);border-radius:6px 6px 0 0;padding:6px 10px;
-  font-size:11px;color:var(--tx2);border:1px solid var(--s4);border-bottom:0}
-.xldot{width:9px;height:9px;border-radius:50%;background:#1D6F42;flex:none}
-.xlbox{border:1px solid var(--s4);border-radius:0 0 6px 6px;padding:2px;background:#0d0d0d}
-svg.chart{display:block;width:100%;height:auto}
-.wordmark{font-family:var(--ff);font-size:25px;font-weight:700;color:var(--red);
-  letter-spacing:-.6px;line-height:1;flex:none;padding-right:2px;-webkit-font-smoothing:antialiased}
-footer{border-top:1px solid var(--s3);padding:22px 0;font-size:11.5px;color:var(--tx3)}
-@media(max-width:900px){
-  .kpis{grid-template-columns:repeat(2,1fr)}
-  .recgrid,.grid2{grid-template-columns:1fr}
-  .bar{width:52px}
-  .rec{gap:9px;padding:10px}
-  .rec .val{width:52px;font-size:12px}
-  .rec .rank{width:18px;font-size:14px}
-  .verdict{font-size:9.5px;padding:3px 5px}
-  .seed .n{font-size:22px}
-  .wordmark{font-size:20px}
-  nav{width:100%}
-  nav button{flex:1;padding:8px 10px}
+@media (max-width:1180px){
+  .board{grid-template-columns:1fr}
+  .heroGrid{grid-template-columns:1fr}
+  .kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
+@media (max-width:760px){
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .kpi .val{font-size:24px}
+  .hero{padding:16px 15px 15px;border-radius:14px}
+  .hero-hd h2{font-size:17px}
+  .hero-hd{gap:12px}
+  .recCards{grid-template-columns:1fr}
+  .titles h1{font-size:16px}
+  .wordmark{font-size:22px}
+  .grid2{grid-template-columns:1fr}
+  .plot{min-height:230px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
+
 </head>
 <body>
-<header>
-  <div class="wrap hd">
+<a class="skip" href="#main">Skip to dashboard</a>
+<header class="top">
+  <div class="top-in">
     <span class="wordmark">Netflix</span>
-    <div class="hd-t">
-      <h1>Show Affinity &amp; Recommendation Engine</h1>
-      <p>Subscriber watch-time correlation study</p>
+    <div class="titles">
+      <h1>Show Affinity &amp; Recommendations</h1>
+      <p>Watch-time correlation across 2,000 subscribers</p>
     </div>
-    <nav role="tablist">
-      <button role="tab" aria-selected="true" data-page="p1">Recommender</button>
-      <button role="tab" aria-selected="false" data-page="p2">How it was built</button>
-    </nav>
+    <div class="viewtabs" role="tablist" aria-label="View">
+      <button type="button" role="tab" aria-selected="true" data-view="dash">Dashboard</button>
+      <button type="button" role="tab" aria-selected="false" data-view="method">Method</button>
+    </div>
   </div>
 </header>
 
-<!-- ============ PAGE 1 ============ -->
-<main class="wrap">
-<section id="p1" class="page on">
-  <p class="caption"><strong>Method in plain terms:</strong> every subscriber's total watch time is totalled per show
-  (episodes watched × episode length), giving one row per subscriber and one column per show. For each pair of shows we
-  measure how closely those two columns move together across all subscribers — Excel's <span class="mono">CORREL</span>,
-  the Pearson correlation. A value near <strong>+1</strong> means people who binge one also binge the other, so it is a
-  good recommendation. Near <strong>0</strong> means watching one tells us nothing about the other.</p>
+<div class="wrap">
+  <main id="main">
+    <div class="view" id="v-dash">
 
-  <div class="kpis" id="kpis"></div>
-
-  <div class="card">
-    <span class="eyebrow">Step 1 — pick a show</span>
-    <h2>Which show is the viewer watching?</h2>
-    <p class="sub">Select a title to rank all other shows by how strongly their watch time moves with it.</p>
-    <div class="pickrow" id="picker"></div>
-    <div class="recgrid">
-      <div><div class="seed" id="seed"></div>
-        <div class="card" style="margin:14px 0 0;background:var(--s2)" id="seedExtra"></div></div>
-      <div>
-        <div id="recs"></div>
-        <p class="xlcap" id="recfoot"></p>
-      </div>
-    </div>
-  </div>
-
-  <div class="card">
-    <span class="eyebrow">Step 2 — the full picture</span>
-    <h2>Correlation matrix — all 9 titles</h2>
-    <p class="sub">Each cell is the Pearson correlation of total watch time between the row show and the column show,
-      across <span id="nsub2"></span> subscribers. Click a row label to load that show into the recommender.</p>
-    <div class="hmwrap"><table class="hm" id="heat"></table></div>
-    <div class="legend">
-      <span>−1.0 &nbsp;inverse</span><span class="scale"></span><span>+1.0 &nbsp;moves together</span>
-      <span style="margin-left:auto">Hover a cell for the exact value</span>
-    </div>
-  </div>
-
-  <div class="card">
-    <span class="eyebrow">Context</span>
-    <h2>Watch-time profile per show</h2>
-    <p class="sub">Average total minutes per subscriber, derived from the same cleaned dataset.</p>
-    <div class="tscroll"><table class="dt" id="descT"></table></div>
-  </div>
-</section>
-
-<!-- ============ PAGE 2 ============ -->
-<section id="p2" class="page">
-  <p class="caption"><strong>The Excel workflow, reproduced.</strong> This page documents how the numbers on the
-  recommender page were produced — the same five steps carried out in the workbook: clean the raw extract, pivot it into
-  a subscriber × show matrix, run <span class="mono">CORREL</span> across every pair, plot the pairs that matter, and
-  summarise. Every figure shown here is recomputed live from the raw file, so the page and the workbook agree.</p>
-
-  <div class="card">
-  <div class="steps">
-
-    <div class="step">
-      <h3>Cleaning the raw extract</h3>
-      <p>The raw sheet arrives as one row per subscriber-show pair with four columns: Subscriber ID, Show Name,
-      Episodes Watched and Episode Length (m). Rows missing any of the four are dropped, because a blank breaks both the
-      product and the pivot. A fifth calculated column is then added.</p>
-      <div class="formula">Total Watch Time  =  [Episodes Watched] * [Episode Length (m)]</div>
-      <div id="cleanPills"></div>
-      <div class="xlbar"><span class="xldot"></span><span>Raw data — after cleaning &amp; calculated column</span></div>
-      <div class="xlbox tscroll"><table class="dt" id="rawT"></table></div>
-      <p class="xlcap">First rows of the cleaned sheet, rebuilt from <span class="mono">Netflix Exercise - Raw Data.xlsx</span>.</p>
-    </div>
-
-    <div class="step">
-      <h3>Pivoting into a subscriber × show matrix</h3>
-      <p>Correlation needs two equal-length lists of numbers, so the long table is reshaped: <em>Subscriber ID</em> to
-      Rows, <em>Show Name</em> to Columns, <em>Sum of Total Watch Time</em> to Values. The result is one row per
-      subscriber and one column per show — every column is now a variable the correlation can consume.</p>
-      <div class="xlbar"><span class="xldot"></span><span>Pivot table — Sum of Total Watch Time</span></div>
-      <div class="xlbox tscroll"><table class="dt" id="pivT"></table></div>
-      <p class="xlcap">First 12 of <span id="nsub3"></span> subscriber rows. Values are minutes.</p>
-    </div>
-
-    <div class="step">
-      <h3>Correlating every pair with CORREL</h3>
-      <p>With the pivot laid out as a grid, each pair of columns is fed to Excel's <span class="mono">CORREL</span>,
-      which returns the Pearson coefficient. Copying the formula across a square grid of show names produces the
-      triangular correlation table in the workbook.</p>
-      <div class="formula">=CORREL('Recommendation data'!C$2:C$2001, 'Recommendation data'!G$2:G$2001)</div>
-      <p style="font-size:13px;color:var(--tx2)">Reading the output: values above about <strong>0.8</strong> are the
-      strong pairs worth recommending on; everything between roughly <strong>−0.05 and +0.05</strong> is statistical
-      noise and means the two shows have no relationship at all.</p>
-      <div class="grid2" style="margin-top:14px">
-        <div>
-          <div class="xlbar"><span class="xldot"></span><span>Strong pairs found (r &gt; 0.8)</span></div>
-          <div class="xlbox tscroll"><table class="dt" id="strongT"></table></div>
+      <!-- ================= HERO ================= -->
+      <section class="hero" aria-labelledby="h-hero">
+        <div class="hero-hd">
+          <div>
+            <h2 id="h-hero">Which show is the viewer watching?</h2>
+            <p>Pick a title. Every other show is ranked by how closely its watch time moves with it &mdash;
+               the ones that move together are the ones worth recommending.</p>
+          </div>
+          <div class="aud">
+            <span class="audlbl">Audience</span>
+            <div class="seg" role="group" id="segbtns" aria-label="Subscriber segment">
+              <button type="button" data-seg="" aria-pressed="true">Everyone</button>
+              <button type="button" data-seg="0" aria-pressed="false">Light</button>
+              <button type="button" data-seg="1" aria-pressed="false">Medium</button>
+              <button type="button" data-seg="2" aria-pressed="false">Heavy</button>
+            </div>
+          </div>
         </div>
-        <div>
-          <div class="xlbar"><span class="xldot"></span><span>Weakest pairs (no relationship)</span></div>
-          <div class="xlbox tscroll"><table class="dt" id="weakT"></table></div>
-        </div>
-      </div>
-    </div>
 
-    <div class="step">
-      <h3>Mapping the scatter plots</h3>
-      <p>A coefficient on its own can mislead, so each headline pair is plotted as an XY scatter — one dot per
-      subscriber, their watch time for show A on the x-axis and show B on the y-axis. These are the two charts held in
-      the completed workbook, redrawn here from the same columns.</p>
-      <div class="grid2">
-        <div>
-          <div class="xlbar"><span class="xldot"></span><span>Chart 1 — Dark and Stranger Things</span></div>
-          <div class="xlbox"><svg class="chart" id="sc1" viewBox="0 0 520 400"></svg></div>
-          <p class="xlcap">A clear upward band: the pair moves together, so the recommendation holds.</p>
+        <div class="picker" id="picker" role="group" aria-label="Choose a show"></div>
+
+        <div class="heroGrid">
+          <div class="seedCard" id="seedCard"></div>
+          <div class="recZone">
+            <div class="reclbl" id="reclbl"></div>
+            <div class="recCards" id="recCards"></div>
+            <p class="recRest" id="recRest"></p>
+          </div>
         </div>
-        <div>
-          <div class="xlbar"><span class="xldot"></span><span>Chart 2 — You and Big Bang Theory</span></div>
-          <div class="xlbox"><svg class="chart" id="sc2" viewBox="0 0 520 400"></svg></div>
-          <p class="xlcap">A shapeless cloud: no relationship, so neither title predicts the other.</p>
+      </section>
+
+      <!-- ================= SUPPORTING ================= -->
+      <h2 class="sectionlbl">Supporting analysis</h2>
+      <dl class="kpis" id="kpis"></dl>
+
+      <section class="card" id="card-matrix" aria-labelledby="h-matrix">
+        <div class="card-hd">
+          <h2 id="h-matrix">Correlation matrix<span class="hint">Pearson r of total watch time between every pair. Select a row name to load it above.</span></h2>
+          <div class="ctrls"><button type="button" class="tblbtn" data-tbl="pairs" aria-expanded="false" aria-controls="tbl-pairs">Show pairs</button></div>
         </div>
+        <div class="hmwrap"><table class="hm" id="heat"></table></div>
+        <div class="legend" id="hmlegend"></div>
+        <div class="tblwrap" id="tbl-pairs" hidden></div>
+      </section>
+
+      <div class="board">
+        <section class="card" id="card-scatter" aria-labelledby="h-sc">
+          <div class="card-hd">
+            <h2 id="h-sc">Pair scatter<span class="hint">One dot per subscriber. Dashed line is the least-squares fit.</span></h2>
+            <div class="ctrls">
+              <label class="sr-only" for="scx">X axis</label><select class="mini" id="scx"></select>
+              <label class="sr-only" for="scy">Y axis</label><select class="mini" id="scy"></select>
+            </div>
+          </div>
+          <div class="plot" style="min-height:300px"><svg class="chartsvg" id="c-sc" role="img"></svg><p class="empty" hidden>No subscribers in this segment.</p></div>
+          <p class="xlcap" id="sccap"></p>
+        </section>
+
+        <section class="card" id="card-rank" aria-labelledby="h-rank">
+          <div class="card-hd">
+            <h2 id="h-rank">Correlation with <span id="rankname">Stranger Things</span><span class="hint">All other titles, strongest first</span></h2>
+            <div class="ctrls"><button type="button" class="tblbtn" data-tbl="rec" aria-expanded="false" aria-controls="tbl-rec">Show table</button></div>
+          </div>
+          <div class="plot" style="min-height:300px"><svg class="chartsvg" id="c-rec" role="img"></svg></div>
+          <div class="tblwrap" id="tbl-rec" hidden></div>
+        </section>
+
+        <section class="card" id="card-watch" aria-labelledby="h-watch">
+          <div class="card-hd">
+            <h2 id="h-watch">Watch time by title<span class="hint">Select a bar to load that title above</span></h2>
+            <div class="ctrls">
+              <div class="seg" role="group" aria-label="Measure">
+                <button type="button" data-measure="avg" aria-pressed="true">Average</button>
+                <button type="button" data-measure="total" aria-pressed="false">Total</button>
+              </div>
+              <button type="button" class="tblbtn" data-tbl="watch" aria-expanded="false" aria-controls="tbl-watch">Show table</button>
+            </div>
+          </div>
+          <div class="plot" style="min-height:300px"><svg class="chartsvg" id="c-watch" role="img"></svg></div>
+          <div class="tblwrap" id="tbl-watch" hidden></div>
+        </section>
+
+        <section class="card" id="card-records" aria-labelledby="h-records">
+          <div class="card-hd">
+            <h2 id="h-records">Subscriber records<span class="hint" id="rechint">The pivot behind every number above, minutes per title</span></h2>
+            <div class="ctrls"><button type="button" class="tblbtn" id="recmore">Show all</button></div>
+          </div>
+          <div class="recwrap"><table class="rec" id="rectbl"><caption class="sr-only">Subscriber watch time by title</caption></table></div>
+          <p class="recfoot" id="recfoot"></p>
+        </section>
       </div>
     </div>
 
-    <div class="step">
-      <h3>Summarising with a descriptive table</h3>
-      <p>Finally the pivot is re-cut as an average per show, sorted descending. This separates the correlation signal
-      from sheer popularity — a show can be heavily watched and still correlate with nothing.</p>
-      <div class="xlbar"><span class="xldot"></span><span>Descriptive table — Average of Total Watch Time</span></div>
-      <div class="xlbox tscroll"><table class="dt" id="descT2"></table></div>
-      <p class="xlcap">Grand total average across all shows: <span class="mono" id="grandAvg"></span> minutes.</p>
+    <!-- ================= METHOD ================= -->
+    <div class="view" id="v-method" hidden>
+      <section class="card">
+        <div class="card-hd"><h2>How the numbers were produced<span class="hint">The five Excel steps, reproduced. Every figure recomputes from the raw extract, so this page and the workbook agree.</span></h2></div>
+        <div class="steps">
+          <div class="step">
+            <h3>Cleaning the raw extract</h3>
+            <p>The raw sheet holds one row per subscriber-show pair: Subscriber ID, Show Name, Episodes Watched and
+            Episode Length (m). Rows missing any of the four are dropped &mdash; a blank breaks both the product and the
+            pivot. A fifth calculated column is then added.</p>
+            <div class="formula">Total Watch Time  =  [Episodes Watched] * [Episode Length (m)]</div>
+            <div id="cleanPills"></div>
+            <div class="tblwrap" style="max-height:none;border-top:0;padding-top:0"><table class="dt" id="rawT"></table></div>
+            <p class="xlcap">First rows of the cleaned sheet.</p>
+          </div>
+          <div class="step">
+            <h3>Pivoting into a subscriber &times; show matrix</h3>
+            <p>Correlation needs two equal-length lists of numbers, so the long table is reshaped: <em>Subscriber ID</em>
+            to Rows, <em>Show Name</em> to Columns, <em>Sum of Total Watch Time</em> to Values. Each column becomes a
+            variable the correlation can consume &mdash; that pivot is the <strong>Subscriber records</strong> table.</p>
+            <div class="tblwrap" style="max-height:none;border-top:0;padding-top:0"><table class="dt" id="pivT"></table></div>
+            <p class="xlcap">First 10 of 2,000 subscriber rows. Values are minutes.</p>
+          </div>
+          <div class="step">
+            <h3>Correlating every pair with CORREL</h3>
+            <p>Each pair of columns is fed to Excel's <span class="mono">CORREL</span>, which returns the Pearson
+            coefficient. Copying the formula across a square grid of show names produces the correlation table.</p>
+            <div class="formula">=CORREL('Recommendation data'!C$2:C$2001, 'Recommendation data'!G$2:G$2001)</div>
+            <p>Reading it: above about <strong>0.8</strong> are the strong pairs worth recommending on; anything between
+            roughly <strong>&minus;0.05 and +0.05</strong> is noise and means the two titles have no relationship.</p>
+            <div class="grid2">
+              <div><table class="dt" id="strongT"></table></div>
+              <div><table class="dt" id="weakT"></table></div>
+            </div>
+          </div>
+          <div class="step">
+            <h3>Mapping the scatter plots</h3>
+            <p>A coefficient alone can mislead, so each headline pair is plotted as an XY scatter &mdash; one dot per
+            subscriber. The workbook holds two such charts; both are reproduced on the dashboard's
+            <strong>Pair scatter</strong> card, where any pair can be selected.</p>
+            <div id="methodScatters"></div>
+          </div>
+          <div class="step">
+            <h3>Summarising with a descriptive table</h3>
+            <p>Finally the pivot is re-cut as an average per title, sorted descending. This separates correlation signal
+            from sheer popularity &mdash; a title can be heavily watched and still correlate with nothing.</p>
+            <div class="tblwrap" style="max-height:none;border-top:0;padding-top:0"><table class="dt" id="descT"></table></div>
+          </div>
+        </div>
+      </section>
+      <section class="card" style="margin-top:12px">
+        <div class="card-hd"><h2>What the analysis concluded</h2></div>
+        <div id="conclusion" style="font-size:13.5px;color:var(--text-2)"></div>
+      </section>
     </div>
 
-  </div>
-  </div>
+    <footer class="note">
+      <p><strong>Source:</strong> <span class="mono">Netflix Exercise - Raw Data.xlsx</span> &mdash; 20,000 raw rows,
+      18,000 complete after cleaning, 2,000 subscribers &times; 9 titles, embedded in this page. No external requests.
+      <strong>Method:</strong> total watch time = episodes watched &times; episode length; correlations are Pearson's r
+      over the subscriber &times; title pivot, recomputed whenever the audience segment changes.
+      <strong>Assumptions:</strong> a pair is called strong at r &gt; 0.80; clusters join strong pairs that share a
+      title; rows missing any source field are excluded rather than imputed.
+      <strong>Note:</strong> independent analysis of a sample dataset, not affiliated with or endorsed by Netflix, Inc.,
+      and containing no real subscriber data.</p>
+    </footer>
+  </main>
+</div>
+<div id="tip" role="tooltip" aria-hidden="true"></div>
 
-  <div class="card">
-    <span class="eyebrow">Read-out</span>
-    <h2>What the analysis concluded</h2>
-    <div id="conclusion" style="font-size:13.5px;color:var(--tx2)"></div>
-  </div>
-</section>
-</main>
-
-<footer><div class="wrap">Built from <span class="mono">Netflix Exercise - Raw Data.xlsx</span> ·
-  <span id="footN"></span> · Independent analysis · Not affiliated with or endorsed by Netflix, Inc.</div></footer>
+<script id="nfdata" type="application/json">{"shows":["Big Bang Theory","Dahmer","Dark","Dexter","It's Okay To Not Be Okay","Queen Of Tears","Stranger Things","Umbrella Academy","You"],"n":2000,"enc":"2uv1xq26t1w20370nf2il2ep1zt2c718w20h15h1e61es2021u41461r21051og1da16j13z2821gl10s21221e27l1tl0p10pj25w2481v12iy2ne1ln1qf1co1ig13g1h520j3fr2xk2it2gn1ro1gj1jx2fx2t620l37f1th2kh1t11h11dp1qw3782t82jx1kk2k011h18v0k11l12co2422rj1wv2sd0jx0u71qt1of2mh2ds26k2bw1wi0q10n136a2hx20f3902d52rg37r1pf1hy2u82ny2q92sb2zw20j3cd0z70is2l02112zw1jr2ns0qo1qa0j70c91eh0la22w1ym1zz1722ci2hb1im0p00wt25o3392jy05d2dv2e320n02606729s2ei2vw20p2om0ls12e1ul1or2zl1lt2f32kr1m218g19k2rb2ao24m1t52pk0te2ej01k0bn0wz0mv2ow2qz1ec1id1tq0w61t90vm1gr1eo2xg2ey17r2l00ci02n02h1182n12bq2rz1kk2ny0w60xm1ax1mx2l43uc2y50943c41e112k08407b3co2tn24q2f42lo01g0501ua27p2dl25x2mi1u72ta0qe0lr1qc25o2yc1t725t1ng2u40b20hm1ai19r21q1po1pb1ud1qw0kn04x2g922b1n82is2or2wi1rh07x0ha24y2jm2a020h1rg1hq2fw1bw18i0yz1fu1y23cj2yw1j82qt2hs1v71pc1lw31m37x25j2ql1x718013z2ky2qw24g2pe22r0za2ih1bs1uk0zb10f2581l52qa2ab2im1ng1kc25i24k2fu1we21e2ft25v0oq0mg2cb2e122t3392th20t25i0tz0yr2841zh2hv1yu2r22ck2dg12u0hu2972jg2l630a1lj0zl2ha0sh0h004b14o1yq2lw29515d26q0n418f1d90xn1xl2ch26a2gw28y20y1ui2bb2nj2kj1vq2e81n02j519312u1zh1h92ga2992w527p3f801s08i1zl2a439h2fk1u71ki1gb08j0771kw1qd1uz2ya33l1is3ea1qy1rr0yj1nu3lj1rn3600sh2w822b1g909z0xs33y25i30o2mc2an0o40gr2i22qk2r82cc32302638x05u0ms06p08931e2q21cm2hz0zz0gl0z52252lu13o1r51ym1lg1el13o18218p1ol1qm1i31oe1nc0ya0pi0ma1l11i01d12qb21012p2db01a09t16i12b1z01dm3601mz3ec0ns0lh2851lz3cs33w23f03428u2732k30fd03d21n27v24e2cj28w1hl11t1yv28n2231cy0wb1jh1460ky11h1wy1jd0qk20o1zm2tx1k61nq0v52mr2n51wo2jr1km2fj18210d1502vp24b1j31zi1pu25d2500xv0n21nw25v25i2bs2pn1mt2ce1lh1ed1j61tg2fw2rs2x118y2vn1jl19f1jq1jj2zf26u1xi18h2bf14j0xp1dg19v22t1qi14m2ru12o1k91vv1yz2k11gc24p23j0lb1os0fq0gu0xd0yy1r036s1ym00f1vl0vu10705i05b20j3cs2121e81zh0d80lu0x01dl1v912g3hi0mg39z1ew13r0bc0u23l42zl2ev1wb1ub06g0dv1qu2gz2772gw27j1ee1t208r0d721s1j321z2vv2hv1no1z220b1v21ut1s92c31z41lo2w624o1j11cw1p62g51y71813id2ll32i17c16b1xm2ns3gl2oc1lb1d81wq2161n51gq1ie29r1qf1l80rs2511sv28l0sr0vc1xi1gh1up27x1q81750kg2q12lh1w21i12yw1c12ub1k41a61v91ex2vj2op1v90ol2wm0im0720800nx20a2eg26h1xl1fk16b1lr12y1sa1s52sq1k01ml1kt2r42uu26i1kh1d32q72qs0v031c0220hz14j0t22s521z26l1iw2700g50tl1ud22j22z29s0pf1s40zi17u0xt1ff1wg0fq1zz29n1fm1z91ol1m61pw1db29q26o2wc1po2ug1lt1bu1yv1fw2zd1pu1y60t91eb0zr0yy11p0po1n62k02pb11u2fe04i04w0yv1en2vd2z828a0o21o21nm1ot0z70r524g1t70lt0fo12w18a1750fu0d30hp33t2g039630g0nj0ss2qd3iz2l62dv1vg2ee27y2ki2s72d423m1uy2gp3480z11lh2j82nx1170wn2cq19k2o920s24f2gv2t81xp2062pa1763gq10938w2d827t0kt0vo3g82ej1hd1wt0uu17t13i1lg1x31ch2sw2ho2b121m0ym1id2fn2ar2dn1wf2ai0pd20m15i0e90xn0yw26m3cg2jc1jb2lj0ro0xp1gz1hs2oa2ro19w0xo0rc21l2eg0ld11k1bl1r53ri1xj3oj1140lw2a41st3w42c12930dv1yo14c0t00l70ft23e3ue2r90k72ht0q90j30cl0gb2sn1jq2572fo1uf1ol1m427d2mm2552n31vh2a629l1sl1sc2gb2f32432463091lt2r218o0kw2401fa31o2r21ux0it1uw28921g1a70cb1up33i1gj29m17l07903i1vw29o1e322r2g21mh2d30ng0f51kw1d42l03071g52of1ux00x0ei29p2fi1rx3op2661a52hc26v26y0dh1cp2902ct23g0xv21i30f2j00w30o722q2ss1x81ms1l905t0by1nx1ct22q1y83961nl2pa1f41g52ag1sm38p2br1jz1af1v515613d0pi18l1qq27f2ig0b823j0pg0rw0z20fh2cu2t22m81r33240ji0d61s71qj2ss3242z10z42tm1vf1cj1670ya30628w2w91fk2ih25i26t1u21h32ss39f29q1mq2120al0kt1oy1ml23d39c2jd1k61ud1170ti1m71ah21g2u52vk2m42rw1sa1tb2lm20y2wq1zv11k27g1gd15z1ds2o722p14n1xr2jn3ap22x0pk0er3432u92ct1ta2ic29c2n20bw0hg3792mj2g82wf1lt0z42bi1zl1y50kv12a1uw1kf1w41f427i0ur0hq0o61051y12qd2511b725e0kk0l62d01j625e1nb2ur1t12v60u913n1x61uq2yn2tn0wg0v81ei0rm0ve0dq0vm1d72bq2oq0rz33307m0pz0nj0r42wk34z0ws13b0jo0fw0s00vr0n30k030p38y2ja28x29w2jx2py2kr2sf3782tr1e42w60s30bf0ve1df2xl37t0r02t817928w1ys2c02mw0rx2ej2yf2tx35c2lc2mm2xk36k2vf1ll0q71zz1ab07w0fp2a01ub0tb1ny3ay1d53wq2b62941to1743li10z1ru2kw11d1qd1hg2h72r61c91n92bt1y12ca1nz1yx1o11to29l2cv2380k61lm2p62mr0lu0hp1ui1yw22m1y02bq11l1if1t51ui29x27c3ek1e72pd17q0t724d1ct3cr2ma24w11a1tm1dd19k1gr1br28524l1yz0hc2iq0pt16v0cd0in2751mf0f52f21930gx0a92li25i0n22a51de1ey1ph0ti0il1ln1bb1o81rd2tk2ih35b1dq1541pr26z35a25b3zy1iw3e40p119421i23u3ip35629r2h82mm1a91ix2zg2h62nc25c1zq1kd2pz18u1rb25j1nh22v3ep3kj11c3j50mr00210t1ft3od3752sf1jd1tv0oe06e2101d82e11yh34a0qt3f51af1jf1870xb3cf1mn36r1lp2x21v51m12ia1km2yi2a627r1rq2mz0z11041gn1zp28q30z23o1oo1ui09r0402el1xl1v120g2nf2hy25q1nd1x123z2mv2dg2vi2s419d3oe0uq0fz1jy1jk3703272sn1mk2vu14a0df1hn1vn2ub1u52av0rh2lj00v05d1740vq2ji1wb2ul11y2kl1ix21h1cj1212pt2r649q1jm3kf1lf1ar1pz22649z2ep14034610x04g0ad2ow2vt13k1w31cr2812sz08j0c029n25z23e23i2pm0mz28j0us0j41lx0v72ac29s2et25r21b2jx2ps1lj1lr21i1ck2xe1k02g80i40e823q1ht30c2sd1km0gy1lv1kl2j10k40nu1rs20p2cn0t51zd1ez1g00nw10o2fa0lh25d1ix1o51uf1se0zu18z1wn2at37h1o82ko0wt0nb1p41ev34f1uv15u2da0jp2nn3692a72nt0xa3cv2xt0ub2p01hw19t0ut0kg2rz1yc2zv15g2zr0vv0p71jg0v22wl1my2500f92441dn1ia06d0ki2302mm32h1pw2sz1uo1js1pw1vb33x1wo25a0071p920f1od09t0l41yn1u022z18b1bu0zs10e1ea1931tv2mo2qb21z2z11dp1wx1l61sp2qo1o84051a038a1kq1pe1fn1aj3rm1ey2a01h41vh2vw2yp1r91d42773dp3mx1jv3kb0kv0cu0sc18z3hp2o82ua22o2u71jc1io1sv29n2qk25h2f30u62vb1lo1jk16l12g2j32b91wl0ri1eg07606k22z16y1qx2ml1tm1nd0og0o70v61n91q816r2wz1wo2nj1ts09l0xh2wr2l61wo1uj2r61872s91gl18b14v0z32rm2jh1de13w1ic0qj0h11gr16j1fl2032r22p62ih0wd0z52l62go2lv27523f1741wr0kh0xz0nm18h21q2ex0lr0nu10x1st1rx0my0cb0na2b71mq1tg1f20o31dy1d91hg1742ro3hk1uv2lp0yx0nz1ml1kn3472m61x61ok2pc1ok0qx20q18o2a91dt2fj21i2rs1lg1qk1uc1se2901h62291vs2e71fr1gt29j1uj1yv2341f02vh1ku14j1oh2wx2tx1dk3fz1cf1p02eo1jo1l126e1dl1rz1sf2a31n521y0o906x12e1o821x26p1vl27w1hp00b0ba23l29i1p81zf2jp2kl2rp1n81ph1z42ol2pd1z11o33271fu07g0532hp35g1hw2fb3461xk2wl21s28v2hf1l634h36h1wc2m71hv0q80gg2gi2f51u32lh13t11c1ck1fw16718y1en1fh1th39i23e2n82vh2u022h29i2s340j12c1l91dv0cn0og17l1d914n2d327a2uy1qa1ex25d1ta2nm2d31yi25h1ya27u0650421911f22a436q1yf2c621u13h0ux2mn2v21ux20x1h91g32dr0010251aw1g520w3ca1as1s41291le1ix2l91qm0zv1rz2bx0ev2dj05z08e0nx0bo2il3743952qs3xt1ke2682jg2tp3kl2ft2y61yq2fz28l1wd2aw22e2il3411ri10y1s819z1il1mu14w1js3hl3901lw33z1pi1ob1w118k3ho1m62ug1zf2541a61e12c827m2j933p33n0681ui0gb05h0390d02li1g12850ro2kx2f82al0oy0pf2nh1o21ln1qb1gw1os1sa2031o71ca1th0dz22s0g20vv0yv1f42bk0bc2mj2ar0em2dy1490uq0gz0c72bb2c22v00x42lm0t612c14i0qo2rt27m2v63dh2j41cd1wr3oq3lg2rm2el2c82ht2ze26i1ep2i82f227t2oh1cy0z91ws1ii1ze0yu14918e2q72qf1dt2j40wb0xv18x16d2gg2zn30z0va2jb1kw10y0yz1273493fs1aw1x61wz0n60uo25y2021md2av38k1ft2zo1di1kn15e1fp3951zr3311hw3e90g00kd1hm1lu37z2oz2ex1wv2qw2hi2i62p323k2mn1lx2ec1282wt2qf1vh1ed14j2gj1w91qx15i20v1ug1wr1211dk1sg2xk2ab0u31q70wp10s0i612326o28l2i32be29z1gg1ah1su2bu2kn1kh38g2ze2jm06404r3j332h2r31e82192cz1hc05g09d2hu2d421q2cf3hh0io4910y90w20ku0ab3wl30q2ha0pf28f15z0mi0460m42fz30f23k3702m018q1eh2tx2yp2bo2dt2a91y12480eq13x1481q627b3jz2j91b31py1b31cz0ty17p1zs2901qj3gy1tk21v1mw3hc3851pq28929b2082er1x81z626j28n28m0qa2wr0cm2z117e0o707q0i92tj21e2bd1ef1jv1cl0zc1mq1a22562ua1ul1b91zq0nq0lz0y91822193a30yv0zn1f91os2930ad0lu0td1sw3ed1ge33f0yz16n29a1t53bu2lm22p2271qy0m90bp2im2ae1y82ym33b1292rv12f1iu1b813y2s82bl3cm0qf2p10kr0z61430sx2z50wl1kt0qj1771j41wz1t91ag1rw2gu1yk1kn2191ho1141601451ue2s91ws1ir1nk12o18y1761jq1sr1qa0d31bz0dc2ek26q0uo1rh0fs25p2qm1kh2qx1rh1pt0nd1gt3151lo2ck07l3701l41990j60832ti0q82je12r2ud19h1ab24u1dd2ts2y628f2ks1i017j0dp23t2di1t02b92h71ef2ga0h60ig12u1f42kh3au2g30nc1u611v19b0od0ms2912ue1oc1sn1yn1ra1z41jg1vj1xf23h1lm0j41tl1v11ls15i0se1nb29h3g10ys3mm27w1p012l12c3m32nx2ga0rm1ud0lm0lc12m0ti21a2wu1hz0vp1i811q19m0440i91ka2ii28c1tw29h1640qp1ea20j2dr2zw2pe22d2qh1dp1zf2v11qx2o324r2ow22r2jp0p30kh2712a22ok1p62gd0tu30h1uk24y1541482ke29w2gm0x12a71nm1xv1mg14h2m02fw21a2xu2hk1ch1g93gh2xl1zo1kn1x42t02c41hs1sj3dc2u72391hn1js2fk1ck1d01am1dv1zx1mx2la0pl2cr0k71md15y20j26m0hv22b0xc1ry1nx0gr13a2e41t313a27n2ro1no2lv0vw0nb1si1kj2iq23c39c1yc2rp16r1ry2en1yb2ze39427416m2c215e15i1lm1032hf33d2uw2rg3ar1pj2a32z62u031j1ju29v2502kc16d19o2621qt2861zi1yr2kt2211ga1hh1h12fv2262u81lz1t82ql1w722d1cu1931yl2oq2vk21r2kl0ov0tu2kg28h2ow2af2g519w30n2b82hx2051au2wv1m22w109g2i920b1wj0a50bh2tr1w62ks21q2v80ld18v1qc27o2qu1zv3020gm3qg0df0t60bp0d53md2hi2u41te2nl00k00519o1k42tv3d71sy1xk25g1v22b829i28c2891w22p816r2aw0tk0z31201gu2cc1oj2ra1lh2rn1jp0wu28r1tg32028x2ni0zq2r01ov1o11cn12j2pj2y90x42sc23e05g01m2ns2sp19q1f62ew22z2wk2ge29924d21r2qc37n0u624w14g2av1qy2jv1rt0tv27i1l624224h2ct16r2141w91wj1v11mz18i25s03e07w0n51bj2041bs15o1x51gz1ah0zt27623717g2r11zu2842jg0nr0hh2cu2js23727j24g0vv1y207608x0ul0sg21j2f51bj1vd1fb1d21hz1ze1te1bj1rb34k29v3gv0l70g12h52gy3ev2490rc21w0na13h0s82s51sw0nw20j1sn2c72j02qy2mk1ps23522g2941yr2mj2951bm0nz2sa23b23k1wg2jh0922n92lr1zp0am06w2rc1d933a20334m1741061ve25h31i3zz1sc2vr13300m07c3di2wo1di1h11p929o2fh0wn0t72db2i81yz2fd2er2a238x1ig1iv1v927m2jz17y3vv1q741x1ol1p71b11lu3yo12y2wo0cg3872zg2td0mo0fz3412di2yh2k72dh16k1bb2lq2d22vf2f71qq0ii1ql0pm19x0bw0vs1zm33d3ha0k92qx0aw09f1a80ec34f2k82b71s02f212r1gf1lr2202bj28028i0dt1or1eu0v713w0jw27q1q824521v2mz0jw07s2r422d2dp38n1tq0kv23q0og0tj0i30i61zj2vz1jf0si25z2772a10of0oc1sp1jn1py1vv1pq1jf14l1qj1rk1wk2c62fl1yk39b18s0ly1zb1z52sb2ej3e40rj3f606a0cq18x0sk3cw23n1uv0f21k12rp28305f03k1my2sh3ym1oe3on04j0eu1fv1gc3ka2tt3a501q3mp03u01l0ym09q3ll27427j0g61rk1cs0px0oc0lh2092532h62981yv0a600y2ld2ko2hs38n1pi01b1m70xc0ol01n0111n42w22m31c91nz1g11gt0ut14526p2cy31y0m52ks1rk1w90y30ot2ug1b50vi0w116k1b11k014z0wd0ug2iz1j716027e0zp14a1101jd1x42qu2d911r22y0gp13o13k0wb2cq0m41si1c128119n17s0jh10b21m2gx1kk0rq1cy1cs1f80670od1n22231rh1q02pp2es29q1a21jo21c26f10r1tv14c0rs0ks1nh1tw0wc1r62pv2di2kl0f70cc1sn2ca2qo28121u0ac1sh0tx0rp0iu0531x736a0bp1q215p0c10yd17b1m70n621f28210x2ai24x1if1mp1ap2ca2ws38b11s32g2yr30r1ov16t2yg1tf1wo17427b09j0au1gs0v51xv2s71hv0at0x31hh1fn13k0j10zh2bd1tl3882ca1fd1ey3er32z29t2j62fc1ra2x41vv1g61pc22x2my2bi27p0v62mt02i04e14i0vd2hj2pl3341b33s02372am1yl1kz3mp0qa2ny0zh2um1e71710qo0qx2u51fs2a214w20k1rb22719e1ia22a2km21s1y82lo0ym0lb1r71iz2cr11x2lf1b72w71cx1vt0me15g2b31zk1uu24a1221501g320u22f1fp2a53cu2662rk1j016p2bp2843bz1sx2la0622qt1f512v0z70252nx1vz20q26c21d12110r2lv1y31th2hd1ru19b1iz0yh1iz0o41251el2xr29c0262yr0h203q03f02u2oq1q12o21dp2hv24p27p0y01iy2kc1yk0nv1ri0ve1v51vv2362890qc1v31ih16b1mp0u90g51z11751he0tj2h81052fx0hm0ly12a0n92gs2eh1pw2vr1rk17811g29h2pt1tg2w42h737o2h42kx2cu20m36j26m2xx1hz1z61ot2n91ud2kf21x1ot1rz40z1me4yi1f81hu1lr1oo4hs1jj1of0t117y1lw1ut16q18d1ji2bt3481cr2up0cr0q32bd1bk3c12tr2cw2fw2h02ly20n27i25m2jg2es1w42d01z307m0bm1xc2fs1yl2hr0j10330j70xc0xj0dq09q0gv30p1840vi1rs0gy05o16012c1kx1ux1zl21e1hw0yq14s1wm1qy20926g35b32c39d2no1sn2xi2xm34i3bo29t1kt2fh22z1zu11c1ki2dx26z1ml1rz2dz2dl2j91ie1qu1zh1j627u1u92om0oi1061oc1z22lb1wh32222j3bz0o00rt24y1sd3bi1qh28z40s2vp0k500v3qy40k2hr2ja29a2we26g1lz1kw2o12sn2821rf3ce0v72p01550wd1va0m73cy2hd3ab29v2rz16n13y1vv23p2sl1uz2z52962dx1d11be1zi2bu3071051ks36l1b90be0282p93c31rk2i51sy25m1m90ry0hq29s23u1bl2en10b1is0d01c217j1fa1sx0ez2mu0y42ab24527t1pu24a1vl1l21we1pt1sd20j37t3911bk1rd1xx1u01om1uq1tp01d0kp1yj1w91q62k92jg1bp26o0q40zr0q517x2cv3933nj0gx3ki1ma18v0yi0kp3je2bl30h23d33y0ly1er1z22623au2ks2120v71al22t1oz1a20vf1jt2471u90yi1e41600h81n00j61l81d123w1he1o105y0142bc1hi1xa2wu3f01m134n0pe0pr1jp1ec3ed2vj3em12m3l91r12000xa0yu3je2r51rw1pv1ws35o2iw14320a20d27a2b21j824108d0611fg1ct28p2om1wc1xz1xe1ch1b42n01xz1w82v732a1er2pz1j127w0x11np2qt3bc1bn0z40r61921dl01q10e0x92xb2oa2ge32p1ho1ej2l32gp2ti2cr1ik17818101405f1b80ve1e31i92jn28y3i91690vy2u521k2sg2et1x93jx2880mg0v53922vw23g2h12h71dw2f016y0z71v61f32gt2r32321ob2kk28x1r11jd1j02m435f3122la2dx01x08c1th2ic2s02980gz11m05s1500vx17b0rw0hn3m115i1od0xd1nq1gx1n91vi12x1891742cc11d0qw1bo22c2fg11h2kn3062602ik0lk1142ca2112qe1tl39h2003910bp0l721120136w14y2gf2t31qs1jq10a3c32rm27i26v23o2cn1700kp0zz1s524f1rb1ey1k919611q1sp2160il18k1jz27r25p18f1u30xm0sj1940pj2052c41un03i1wi1k220l04600a1xi30731p0fk3370wt0ze0lr0ko2w11du2mw0x227a0g10gj0w60vh2ct2vj14i1y61nm0fd0182mj1xj1dr2di34f0zg2zi2402jv0yo0o93ae2y71or1ww2rr0m602q2ce1y626e21r28b1ms23b1nf1ty1ds1sd26q1hq27v0sk2k91o82dw00b0rg2i71ka3an0kh2mv0ny0ks0y20cm2sc1in2ax0vn1ra0vh1fb0jr0v31qt2ly1hn3lp2ne05y0173ud3rb1xy3861oh2911q40h111n27k2cb1ng1ys1of1xn1k51cv18q2fg2411mu2pb25r0jv1vf0xz0vs0x40o826f1dh2kq1ze28e0ke10e1s11vn2iu2fc2z744m2za1160zk3gb3sz30f2q71en2571n00zy0yy2kh29h1ge1f61dh1xo21e1uj2d720i2cu1oz26t2ni2i520x2yy2nd1wt2oi28p2r92om0gu2e70pf0dh0jh0uo2ju0i525v1012eo0ic1cj14813m28z3502221i32201yg1w118k1c81qu2j73470kj30l10g13m0kp0ux2xl2r91gt2eb27f0vu0vo12926q1x822625700d2u20xw16y0jt03e2gb1922pr14k2f60c90ic1bt1i62kc2n72k21n02mu1zy2av16s1qw2ml29i25b19c2de1m21801051fu2ex2c222x1nd1cu15h18425d1ui1dg2zi1xe2j61au28s1xn2q828r1lt2sa3jg2712p91mh1nw25w2az3br3i12120xs1q005i01p0bz0q11hq2er2q415j2vf20v2py1dr1ez2l41vz25b01o25i0yt1fz0d10382882752d30s11xq0ok0ny0xx0k72d32kl2ht1602gn0w81680i918h2cl2xx2uf2gi2fd0f10p92lz2fc2o11eq1fm18n0sd1fn1an1lo1nu0v92bj1b11is17p11814w0nk1dt1433b41k917k1bu1kc1zp0y31411p62601sc0v81lx2311xb0re0xb20b2w12l62502xh11d21w26q22s2sk2ma10c1ve1qy0tg0u01on1rs19h2wl2te13y30a08502v0l212f2tm1tc0t62ha0w21tl2p62kw2hb0pm1tg2ix34v1vv1kk1tf2h33302462bs1mk1dv1be0ga0ge0vt1hv1at1da1m912s26q01u0km15s1481xm25c1tl2bk1gg0ku0an1mo2dh1fc2gy1a70vj15a2x92ei1kl0ng14t3f016i0qr1gn15y10e0rb0sd1b72ka0sd1ds0j621x1jv0lt1q10qm2p824g0tn29z27f1vn18i0uc2er3181ra1o02160cq0qj1ua1oe20a1pw2tu2cn2f009z0d92272q42is27o3ef0yt4b50da0yx18o1853oh3t82ir1682e80nw06k1u116x2iv29l1k32ku1ye0730l72fk2rx1ln3052e61ub2in1rw1gp1s42072ev2wr0yy1fr18a0520n320g1bt14f1ei1k40ml2430js04z0ia0jv1s82i838d0uu3e12671jj1he0k738z2el2ia10u2so24d2d814l0re2tt2io24q1pw2b10mr0yu1uv1mi2gb1ul1jj2di2re10a0wv20l2l723y1mi3ft2a63rw1gl14t2k224x3p520r17w1qy1jl1dg1a62d01wn1a42963bk19x36z0gh05a1w31jq36v31o2iq0762tf0cf0sp09j04a2wr3fq2931tp1pl0ld0xt1xf1p523136d1kb0nm1ak23l24l0xw0xf1e02ug2fm0r922z1zk1od0nu0do2dy1p12d83gm2jl06b0x934231o2b82292i91t32tv1hl2291v11qy2lk2g013q1vr0xy1lb1ev2141yo1071xa21528m1cp1801gd1nh2491gl2o637l1fy3rm09l0n214v1hg3eu2rc0iu21e0an04l0cb29o21u0cz2n90m327m1ll1411bi2fx2c319a2y415s0gu1ns08i08y0sj0dt1ek1r81wj0cg1n419311m09t06b1na2w22dq14u2al26f2jg1nb1mt2a11vv1l416y21e13d1fx1lx1dp1r71qf1h22f90yi1p31u21fb1vc16h2n639516s2do0lt0qn1if1ga2wz32d21j1f52r505n0js0pe1fu2fe2m62lr3j33h32gy1pn32k3b536c2bt1zl2t21ve1e21wm2mw2pk1rz2i828t1ld2s32o328u1tm1dx2r62ed1c81ey13z1d11gn28m1w010t1mb2kk0p01rc1h412s0gq0ns2aa1jq2mc1om2df1r30tw2031xf2af29l2481hh1us19l0uk2fz1oo1th2d44cm1uy4c50js0kb1lg1uw4pu2bl17p19310e1ns1j30lk0zu0z92qd25v1351pm0nx0w11731as20a26k1hk19j22919y0sg0jj15o1oc2nu2pd08k2a307w0jz0l401b2f22842cl12u2j80cu03x0v00sb2kg3fv2lv1ep3a80wb0dc1so1gx2vd2d52mx2mw28t1qb1x72ys2g624b3rd1il0r91v20bx01w0t014e1kw2j628x1rg2gh2gi1uv25e1j323k26l2m21tv2y80cl06h29m1ue2l01rc2cz25p1qt13s1a01l12aj2631fa2ma2a61w419a0mx35h2by2hz1pb30u1vy2n51em0jx2cq1nn2xe1rs1oc16m17x1tn1tx12t0vw1gg2k41u40tf25z1801nd1aj1221z91zn2re1052dh1cq16u0uf0yh2mq2fi3pp26o2cu16y0c81z72c939s33u27m1r813x11c0l217h1vh1ky29e1es2og2dd1fs0s02z22hj1s13lj2ta1a22qu0j00qj1e61e430n1l72zv1382lx1sg2081fm11d2sj2802we1w92z511c0uv2bf21w37h1zd25a1ud2100q60jn1tt1sl21k2w53ai45l3oj10z19z4f349j3hx0xk1qt09y3861810hr0rj0992e71fa2wa09w2pn0i20ah0u607j30r28y2hg1zk1u50be0gn29a2692cs39t2ce2km3831e11om1b72c92vv2gd2d90m62yh1621c10ls0yb2mt1hb1ml1b51ug05u0cl0yd1h31k31kq2lb14731z24z1dh0nt0p52r53ci2sm1nt2ct1iw1gp25d1re2p21xj10c00l0jf0li11l10h0go0qt1qe1961ew18r0d003z1lp1f419h38630v0jz37f05004m10c0yx33z2xt16708w1s513a12q0ci0051ri33n1sw0ni1yp0oa18w0uv0o51vh1q82it1at2o30sl1ct0w31co2jv1dg1ys06e2k60gz1b411w01p21u2eb16w2dv1t92p72dm1rh2bx1dq2is3y128l3nw1dd1rd1ug21843s2jg2ks0v223r09v0581d90zg2b93871l41mc1uf0h20jf1k81gi1mg18t2q632m2iv0yl0q12wa34v2it2ug13z21k10405m04r2cp23t16o1mz0zt41w1gt2hj2ap4bo49k12a2ud22o10721t0ps14o1dv12d1wy20s2980mh1qi1u91um05s0el27k1t92lm1yz2oy0es1ds1qz20h2p41xs2er1oo2o309w0gw1ke1t42gc1f81y60gr1c62c41ys0in0bw1or2c814n0g50oc1ex0xp0780qc0rr1u61vg1fc1yw0tw0tx0zm17r1y02st1qy2e322h1d716d2j626u20u2pk20s28n1xe1ar1mt26l1wl22g3cv0zm1dr0xj0o90qb1rz1l30qy2jh1nb12r1kb1ch0x21oc15j1902mx1t01jt1kd18u18m0xy1dp1nv36g1zg27s2391ou1iq1q329f24b1xe2jl2ll2rs12n0pw2hj2ak2m41e91ot1lg1yr1hz1oh1fg18l1mt2fs1ko29f1cr0m60im2xa2n21ka1fq1nr1g92if2391kr18i1411yg3tv2lh1aw2kt2ku29q1hc1b52k337o24p1i61de2h01qb1xv0y11my3nf2sv18y39f2jb23014313y3a52cq2fa0x92ch1591ag12i1272eo2nk1mx1291831560w810018a1gl2141gy0lj1pu1o71zq0g00fh1k72uy2400ja0vt0c510b0jd0gn1oe1kc35x0u52bg26w0zu15x0u42x80qu19l1k418i23t1nj1qd12m1cc1tr0qh2jy1e71p01ht2xb2an16k1f01uc0xc1uu0w30g31bk0t61kz3862js0pp2731p50wz0ic0582qk3fp2dw3272g91n61ju2le2ss2i11g61ye0tb2q90r51710yi0vm2693412eq1e221j1ei1c70zy18s2232wh2sx0lc2rr1yk10012v0np2r01cg34y2av2h520k1ju2bz2392vu22o39k1ut3ln0ik0ir0qi1rk3gy1yg3id1g23c31nh1yc1gu1kz3du2ry1wg1rd2ho16y1w819p1pq1ul1k12821yi25w1m42742dc22q2al2952c51il1zh09w01515d1sa2511w32o91lx35w0oq0ge1q22072wl2lv0yg1zj0xr1bj0qu2bu26a0rs26j3x81bf31g1mu1lb1g41fv3e11zg23n1n62b60c90uy0re1951xw26l1qt31t1j815b15q2rh3301na3kl0xt1dr1da1ar0sy1jl1d310f2223he1922gn0hd0gu1lb1gf2zy1o72ox1z728a0rj1cu1sx1ue2hs2ob2cf0v12891oa1gy12i0t227628525r0zc2cg12e0l30iw0yx22f1fw1ab1m41990z31iq1n51v01813ox1oj1v31td0ng0341h61pl1ul23i27m1ot1xs0ge0ip1o71v625622y3560z336h11w0ao1231183742ew2ly1ra2ig0ta1bv1th1uv2as3ds2oy15u2qe1pu1gz16t0tl2r51a02ux0bn3f02dz2bl0qn0bj2zt2hh1jh2751qk16c0kl2421rr1hk3lq1731vt0ok0cm00d1nz1rd1222e71mr21k1cx2ya2l82hv2bo1ou1jw2f81uw2k40oj0kx2zc1sm2iy1xl26y04n2ky2an2ln00n0662h02fy3fm1uo3zi1mr2fa24n2303h734x1dc0w21vt1031be0ox14h1dk23t2vd1f42cl0u20ro0lq0z52n72tp2aq0fp2oh0470i109011h2np1fg1es1rc15v1kl1j81yr1p71851f93ok1wa3b21r31x21ud26f3qk20m1ex1wf0um19v1d61cr1w111c37a2bm1mo2fq05h0au1bb1d62902cv23p2ua1vy0wm0oz2kg2w51zw2hs1xm1fy1xn0om0pt14c1ok1uj2hi2fr1yu2dz1fh1d42t724j2d82zz24o0du2vm0il02m0m30oa2iw1xs2ek1kp2pu1hk16p2ax1uj2hr2qn1db17a1jw1b51ao1lj0zb1ds1sv2dy1kv1n61h41jo1kh1mz1wi3jf32g14035i06b04z0rq10s3ek1tk0hl15a0ti0rs1ca1761140m01rq3tg1rn3j31ca1fp1s81tu3nk2nk2ua1u62qw1s31rs22f1r02r92d43ou0ld3zr1hr1gn09l0ua3q92il1qv0le2ox0vn1960pi0gs1ze2ge46w29z41t1gx1fu25n27j4e71n413d2vz0k10bo0812g32l60vi3b72ix1uk2ir1qa1km1ac1v62xl2v73cl0ug3gi02b0ap1ke0cw3iq35j1gv0641j50w40lu0jd0ll1hx1zl2kh1612ok0am04n1qr13h2ku2kl1wr17w1r40y00iw1im0zp1vm2fq23i12v2m91o329d0ov1222au30e3ez2pt3yn11y10z2aa2rf3kj3142uh3052l71q41ef26a2iy2yz2fm35x1w54m22fx2ni0yv1u03zk1dm2561wv24j1741ua2021ki2653ew1r726a22k0840b51w82a91y12np2as1zu27g1rw1f11l022728i1xt26i26g2pq0gh0w61iw1t92hp2kd4cj0wt4md0pe0la19e1164lm1dr2cf1f926p0i50nv1e31ms2g52ys1r30tw1ev13e1fj0zo1771n01en3dd25s2pj1jt1vi2co26s31r26f1fs02i1wd04z04q04408r1o12gs1pb1d11xs1170fr1hg1ap1ob2yf1ry1a02603632ny0sc19c2122dp19a0d81lu17911403v0i01el2pg1kt05p1k71ml1xa05300f1ee2ap2mx0lh29z19f0bn0870k72eb2am2m01z128j0no05r1yh1tl2f42d83od0od3r416l1f30gr0n23s32752q30hf31d1n71u30k509f30r19v3px1t53c02jo2ty1mn1tr3if1u92uh1oa37s1jh1lz1p21e03042gs2wk27p1zh14p0zk2ad1rn2my25t37g0eo38411y1a71i70kl3aw27v1rk2fl1492ic2qh33h34z1062451pt1hm2kr1z31sh1yn1hw28o1s527s2qb2080nw0al2op2to28r20e2wm0p934i0ke0ma02l0i133u24j0wr1wo27h1ee1oz17p27j1g92bg2sz2tp2r52h72352l52c92ji2k32y81ik2qr11j1j71qe1tz2td27c2b811x1yb1lq1y00lm0v12bs1og2c41rz2bq1c30wy26q22m2a71ga22o1772fw0z21uz1s31h52363x22y71qf2ry19n1bv1zd1v02pf1m82z21692rd17a1g516n18f31r1zt20z19x24w10b0zd1ou19q26q2mu2c81bk2il19913f1v014r2ef2jd2e02cb22r1ds1ko25o2381w32mx21x0tc2q808k00n0v70w22gv21i1bq0v21wt0s50as0o40zd1je2gn2bj1uy2130y40kz2p21v725c2cp1lu1t12632dj2an1ab1ph1sf24e2m30ka2mb1mg0yp0sa0bp2q02gs3wy1w92to0ca0l81p52783g52ys3c911y3360wu0uh1xg15c39h2au2bj10y2zs0m910o1d819h2no2b020x0ua2ao0ue0xm0ym0y41yd2z31io20g1ib0sy1380s31po1ko2wp3ea0r12oh1tp1d20l40pb39p3aj2a436z1un1r024u3gc3bf1yq18b1mw2ko14n11l1cj37e3141mq2vg2v71t23591u71sp1ci1jv2yr2op1zr0vz1qu22y2h81i71bp1ug1rn2ge2l32070a90gr35o2t22dr2gx2sz1jy2oa1sp1mr1xz1hz2mi2yp4471u941k0xh0je1po1ld4jj1sx1r22hk1qw1g012629w2hi1oi2l629120i2hd2gy2vw1jf1t22632up1af29a1nb13m0yy29y27a1hx1nj1y01v11yz1w01sc1ks1sh21d2861zh02c1tf1kh1oe0nj00j1t62i11za2512ob0kl07p20p2hd22n1tn3d81453fe1oz23y1gt1aa3ge1rt25a2of29a1gj1gw2pw2gd25h28c1ln1tv0v01up1fz1e61gf14f2t52r71bc1zn0z80th1ig1812fa2pn1271pu13f2by1vf22g22411n1s73en0t833l3fc33i0zi0rz39x2pu28q2aw2uc0di0jn25u2gn2kv1sr3241uy36307107x1ei1o737w1bk16s1mj1wx16e11l22i1091ac23637a0982lt0yf1hg02y0eh2yh30a1rd1oo27z0gd0tb1s71f51x12px2kj16m2md0w217k1kl1at2h92bb13g13d0do0kl0il0ao0q80r52230tj0ld0ud20g1zb11x1au0q222o2jc1c22h41tk1rf1bx1ax2q92dr3pq1de4df1sy1sk1vn19x3ur1nl2kj19m2do0l50lw0wh11p2l923m3a610u3il1hm1eq18211m3qk26k3bs1lh3dx0f40us1ga1dl3b01hb2161lc2181800pc0ic12m1x71sp1kq12e2ew0qo0pv2kf0v81v82kg2451si1i80rp0la25k1w71p72bk1mg1st2bm0730zr1oo24n1xv24h2mf2gu2lf2ii24a2842bu2fs1r31pb0uf23y2cy2791aq12j1rz3ad2mt2462qr1821m61uj1sg2mp1sq1xe2wn2w70xp0uv32j37f2a82gx2oc2za2dw0jg0al2go2uj2ol20i2id1ab28d05h00i0yk1df2lm2c51i025k17c1t31hr18o26311s2li1nz0sn1di0qq0q81051711mk1gw3nr33w4100ua12r36i2w73pd2b71tq0z61tm1x81mh0pr1681nl31t2gp07q2s11b41c90ni06k2me3eh1jr1o32fx1010wa1lt1dq1nm28g1561vq1702h61yy2ff1wj0yw2c93af2ed37c10z13u0vz26v3fx3oh2661hz2uc0vs0sf24h1xf28d30k2kl2hc1zx0ov0h92972662e71xm1wh0p71o20vy0ct0o60rg1dz1xl21r1g729e0gt0j21i513326q2wl1l31fq1472bn1o11ox1x51g71ov1si1p20zk18p1fe1fz1ww1gv2zi2oq22a2nd2iq2dx1uq2dd2qq2ir2tj0mr2i30qy1ce0xh0q12pr2mu3be2pb2ta0pz0x129a25x39725n2zx0yc3av0yn0qk1890py38e1xc3o722a3cz1b61nk1e11v33sf37u3473pj2wd04p09z3y13j334u25v1tm17r1pc1u51k51pu1de1nm2270tp3731ny2b622b2y72q119629k2h31ch2330260a70cs14126w2fm1r313f1z80up0id0940z22151of23b1zi1f804b0cu1e91nh1ya1ys34h1tc2xu1090ng23a1ss34i1xm04j0vq1ln1yz1nz0pq16a0qh2u42a700f2jm1u31za0ci01w2iz1rn25j2ms2zh3jb3dm1fr2j72ja18b1ry2dy23k1uu1f31x027g1y713m1uv1pt1kk1350n81fs1vq1mk1eo2zp1hg3732651rf2gd1t738d35l1m50ff2e909h0kb07s0dn1wu2bp22q08v1kj0ln0j90e30aq1se2mh1ms1gk2111p51ed1jb1ic1q02n92ps0s62072762d30ol0me2dn2cl1hz0pz1sa2c92m80os0x71nl29o2bd2k82b20s00ku2h12ll27o2yk1ob1r11vy15i1331hx16t1t22el33q2aj24c2hp2mz32429d2w036f2tc1xl2f81jb1sn1q81sv2s02p52ca0ay2u80jh0vo11f0g72nd1xm2101kd1fc17520p11312n1xs20a26w0q120y15v1la0v80wy24w1v63lx1y93rb0wt1aa2491tl3l232e3kx1442vq11u13w1q618e3ik22c2hg0zu36f00a06s0te0v22pk1tl3r01ii38i2a42s10ta1fj3sh2ig2jf1q82ab0xm1as22u1ox2gt2961m53bs25y3my33u3ck3dr2162hw2w42ir29l0q00in2se2d62lb3hc2dw1f11xa1p01iy1cm1cj21q2vm22g1nx21t1q11n514n1m521w2by2zf2ws2um2551jo24x2sy2tl1g11jh1uj1zv2kl2342bj1sc1f12083d71ti2nf11618316n1v730l2r52qs2ed21y16d0w01wd26l2by1lb30g1ic33j07602r18d1i633g3mx2ug1ln2wq1tz1t711v1fy2tg2bo22r1m12vh02f0go19v23o2lv2cf31y0b33fs0mw0bm0jj0593dn1wj2wf1ns3an0v30eo1ma1g03by2md3aa2ba2v718c1rj2872fq3b61lm1z21bm28m0y119m1cl1aw24d3ng28w1ww1nn1sx23422z1v125d34m1hw0nn1ej0o40q21100ur1ep2x73b41603jf0na14m1460zg3jm1gg2501wu2ni2de2p02ov2292as2fw24621f1ne05f00o24226j1wh3272f20ym2ih0ut0kd13b0xk2eq2oi29e1g72mu1ve1bq1di1g92co1p231t1713v91wm1cp1em0wk3na1ww35o1jx3ga0h416g22y1jc39221a22i2ih27d1d422e1za20t22v1xx33n1zt2r60a90al2092de2us39b2zo10c2xp2w72qv1gn15r2w714n1it2ky27i19l1um24v2cp1or2px2011kk28t02n0461ry18p25r1im22i1ug2f91aq1ge2ov1sd2a51pz2zt2h23ee2132jk2242jh3c512o2u015u2us03t0ai0pl1eb2z01z523j24d2my0ql1jk1z91sf2oa38x36f2042j929e20r26o1wu2zr2h81qo1u01o417y0j41wo2631we1kp3740ch3hp03z0780bs09a3a02xy0nj1p81kz0qq0v710v1yb0ul32p2k807g2y205e0lo03c03i2oi2dn2gh2ac2fl12j0zp2352fq25y3kk2i40fw26a06z0190wk0hb2aq2tl1go1wb0ww0fq0fc2811r81b12qi2j914i2f10pn0wx0t61hl2m51th1vq11z26205g0gh02o13r24l2pa2ra02a2g71fo0tx08x08h2hh2g527x1u03ll05p06r1gr1zw2zr2mw3kp22v2ye0oy0oi1t422i3g41w41sz16u2271hk15b12412v1ul2e62bz1sw2hg1fs1ek1s92012et1t742c0lt3x003y03o0st0d93yp0zm1ir1p02wu2ht2cl1nh1ss24p2xj2bk1xz2r41ui1i92r927i2ku1dy1qz1xa22n0xe0ck1pz1p92622dq33x1lj3aq0p009k23q1xg33b2iq24h1ik1p41tc1hy0tf17p1va2il29p1a62qh0g306c0v20we2ls25239s1co39p0ak02s14e1eq37o2hd3bd2gt3701un1qg2pp2hh39p2lt0i01s50pb0sw0fz0yk1q80a92ro2e20k92w91yl1sf0te0mw2xb3dv3sb2ho2xk1dj1yn2pj2e63s22gj26h1ox1sj1pb1zx19w1mv2362cr49523s48b0zt0ji1702354e71r71u90os1dt2bq26r0tn0je1mt2l13020mj33b25q1wt0t014q2xv2q62sk1rf2c81ey1tu16s1mh2q02721q30vv1mk0g10oc1p912m1np2ng3gj1f83aw0yg1tw15015e3fz24u0in1pm0270m20af1j81p90g72q91ep2091kz0up1gc2vx1yh1p82vm1yh15h25304h0dw1l01ij20d2vb17g13b1pu1y811h1610z219u2dy3dy08j39g1tu1jb0ss01u39o1o824g1qg2or0tc0nt1a022b2aa1xq2a703l2bq10r0vf0420422fe2ok43q1qo3st0y00yq1ta1is43j3tr1n22cr1e30880ad27o2fm17s23r2282j31r30k208f1da2e61qj2lh2us13e2r10ut0f00ry1dq2qw1yz3oo07o43k0ux1le0zd00644j1pp2351zt1kb10l1en1pm1xr1tk1wb25g1k92fv1gj1y41nt1ry2d81122td2uf2uq1e91mq2f42on2xd35f1180bc1e432i2sk0mn06a18m0xs1xa21a2l40do0ma1f31sj28z25h2m01fs39j1aq1bi1hp18h30f1l52qa0tg2ia1hm1gc19h1492p81ro1wr23k20g10p1cm1by1tm1z935x0t52ci1bu0e20702od23e0zd2ft1ta2ei1cq0lo0n327p2j41nf1pw12f0ca0yz06z0bt0lp03o0u11y832x18b2jy1dl1h31bv1nk2rz1uc2w436w28j0wi1cp36u35c2n62ad1qy2ai1d81dm22x2nr26y1s92f61r416n2821v41tt16j10k1tr3hg1v02js1dr0jl1bm2hu2781rm14r24z1r72dh1dc15d1gx19221x2ak2wp2vv35n15k1ej2c12ig2wi24c27p1t01lo1cx1kk1j420522o2wd32p2763bt1o01lj1xl20q3bf2j82ox0x32yi0pl0f20ap0wh2v52og31s0p02jf1du1el0sa0i22kn2j02dw1hv1o01vx1gd19s1e923g1qm2ds2lj2os2tl31430g2lm2gz3292dr30s2q20hm0ls2j02tk2kz2t322k1a829h1uu1ol1mn1051wq2vo1oj0381yd0it0fu01g0131m133f2ih1ge2hm1uf1ny18z1gy2hr2km1p01y52dq1lr1b71br1f724a38932s2gc3di0gn0ka2km2ps3g02jq1o703z27x0qe1ez0k10fi26d26h1fr1du1l20r80km0lk17g1m22b72811lk2890ld0lv1ae1a72622at18j24v0wl1kp1xs27828k19q1zs2802ho1l405u07p2hb29c2013bm3os1843yy0a50ax0yf16i40i2hx2m11042p60w10zu1e11302yj2dg2tw1h12d01601kr1bu1eb2vo2jz0sm1xg0u60xu1901ri1900vx45k1i80wa1630v00sl0rw0xr18w1m71051w71t519t0m31wm1u11d51sk2kn2nu3h21c111c3by2u22w41go2eb1ie2kx0470mp1gw16z2pq2661ka2pl1rv08j0cv2ts2eb1on2gs2bb1sg2ix0q618u17m1bs20u2102jw20r2n00u80qc22h2302ff1zc1yt3261wr1cb0xs31g2vn26s2ei19616p11y2dp1qj0z919613a2062ge25x28z0gy0hy1nn2912ej2i83311i22ka1d21691ak16h2zu3031ys0i31m901j00417a0s51xm2qe2oi11u2t111x11o15515e2vl2ux29u0ta2h208t03l0re0sn2a12zh2jt12k2fs1gu0w313g0qg2eh2hm2t42dq22w19s0to1xl2252g527t2lh2ne2gx1sp1vm2mv2et2iq1u627e0kl2fy03006l0r70qc2fl22n34a0vd2j91bk17x0io13m2r41zp2sr2jo2m61tb1z62ck2ep2mo2rl3d61sf35512z12b1kb1xk3co2j120m32r1ra0i703n36l32r1tu2qt3271e330q1tg1rv2221t32yd1lk2al26w1gt0yb0ct1o11wi1vv3751w20eu2120of0kb0wu0oa2c121u29y1ay1ta0sj0j010d17c2281mw3pa2xf3mn1vy1t838f2ye3m821l1rc1aw1ih01003y0z81981lw3uj2fl1dp38310h13x1a91882q922q0qy1af15m2vz2vo1ar1cg0wx24422k1kw27z0ty1171cm1ih1tz2722cd1h72qb1ug26x0w71e72i428139o20f39d0z40761r72al3kl1tz1ce2gi1cj04z0e22892cc1ft2ej30c2cx2750e10nf2jj2i12k42z818524a1431i11ol1mr1y61322ib2141c32xu0ti0fx1pb1n02nf1mn0ok0hj0n117q18v0cp0mj0mg23p3700yn3u70x80p611l10v3c91z32fb12o1wp00z0j61fq15t24c2ci33m1ga2sr0xk1cp1ll1bc2xi34w2ly0582yv15g18n0ei0852m12811x42yc2h61191cl30r33t22629d2tt18h2qg1us2og1ck1kx2zq3eu2982yn20r1651c92rk2xk2842ut2yo1oc39v1x71eg2be1ls36w2o32rz0jd2d922s1iq0jo0pp2hq3iv1ow1fd2960fs0bv1wd1801sy2m82gh1731hh10d1611z81al1yl1372l814925f31n3m41av16l29w2tu2rc2h32vt0z506k29f2lw2t31by4gz37p3g90jq0f537a30g41z2le2lf24m1bh1i60uc1c42051zl1992fi19h3260k70bw1c31a22nc20z24l1r525o28j3291tj1n81t52391o01z01sa05u06i2if28l1re1u809c0461590o21df02p0190ig23l2gw2ew2lj1nt1s024m2fi2ix2ya2qe19d2gy0x912x1nw18q2ox1vh3b11tw3mm1rz23322e1oo3fl2ng36d2un2z80ay07h2hs2p23bq1pv2oh2292tq0iv0vl2ek24m2nf2741hr1ct1ur39b3gq1dw19i1vu2ij2an01a2ls1vf1qh0er0cb2fx1p71gm17f15o15o1fi0ha1351ee1i72gu2812fr0rt0zv2cr2gz2h62ma2510u223c1p21k41gi0x925530a0vl29y1da06t0j42872cu15729l2sd1b42dz1mx1jc1el1it2sa2161ds0yl22b2dw22813n16a1j92et2v103523b00800c07a02h2i22ck1mw0q91fz1q51l200c0q11m52gq2ge14i2ky0v10tw1ki16a2ce0r52wm1r61in0zn1241mx1og2bb1nl37z1103rx0k509p12g1aa3mf1sk1p42512e11ox2382db27o1th2ep0tv0jt19z1hq17a1410n90wp2fh1ra0u118r0x51690y00qj1du2ph2y01ns2o70wb10z1kj1pf2p92h21fu0s61ca0ke0fo1ht0vz1el1if3441k129p1fs1ci16s17y2u237i3u01z83r402b0ae1en23g3o633m0mv0kd12z0ud0vd0cr0qu0r71jd1iw1de15o0pk0yu1c918i1eq2iq2171t926k1ak0uv1sp1ir29v1y41t21pm1x21lf2491dq1qu1ku2ef31s04o2ze1w22cn0j509r32n2yr2jn0i73of0fq0zn0kw05t39r3mo1v40np1wf1i219a0xp11x1tp2s12zo1p330q0rr0x71j91fv32s2hw36b0c63b911b0zs0li06739723s3xy16b3ij1a71d70p011n3s52fe0ve2ut14k0cn0o42z73460pd35k27z1v91j40sh0lg1ez1s82312ac2lt0lb2ky0yj1he0m60v52t71rn3lv3fn2xm24w1dy3b93hg3aq1bc21e1ye1al1xa1632pv25c1a12mq2gk1sz2qd1vm2aj1hx1r22rj2gu2of0a52i61ee1fa0ok03s2sp1wz3rz1k73ku0k20do1b91n53sp2y52370pi1uw1fx1ht0oq0uj1ze21z4a21kj3yc17r1kq1md1gv4b628c3072gt31320t1m92eg2du34b2az2l91sl2nb2u827b1591lm2hf23j2bt1m02m019f1kd1hm1jk2h12gl2nr0y32rq0wb0ba1rh11m2tz30x3ly2u14470f70832922tt3ud1ly1tn1v12cu00b0on1fl1r51ti2m72y92cf2sm1d81q52df2f72ss2f618q2qg0ut0620bi2zn2si0xr2er2g11jg1vt0mr0f621p1bf25h2up25m1o22051oo1wz1lw1kw22h2cf30j25t2ba01f0cf1za28g2ss2m00zr2gh10y0ws17v21924i0z02r91yy12q1f81ds1ef0re1641z42051uv36a2lo1jw1xi2a92pd21i2hz0rh07p15k0s013z0it0gt0xm25r24f23a2161ks1y32s425c29628e2p80cl1rq1eg1130fh0a625j2462e10o42j303y06c0oe08b2g12lt1ti0160xl0n708z0580391fp2d53ib0ui3u507g0ho14t13p3p42k42410rt1qo1ns1yc0a60pn24w2ay1f82br1pb1b712z2so2bv1h61bp1zg1z81oh0h00ud2041ri1ys2c10wh1321ej1pr22r0mi19t0xm2cr2ag1yh1pf1761a51kv1uh24i2gq2g90ne1kh1x41ta0c008i1wm1y52nu1972hw0mo0fj0ut1az2fe1ks1ze1u223m1la1dc1aa1gt1zj2p82jw14p3261pf1fy11s0tx3152592ry3232hw21y1c03ir2xw2r62f52ke1mj2if0s110t1d31ln2o12533g312441b1hu1p41d30y53ro2b72n416p2lg0470ds0hv0q12mt21d3a018j3y81jn1rl1a71k93me1pu1ub20y29o1461801zg1sx1uh2lv1yx2461v826w2ck1rc23q21a1xy3yc1o53ve13w1cs1lk1r13wv2ez1xn1lf2570tq0gq2bt1oj1wc2kg2x71vh2uf19f1652191sl2sa1yb1xx16s1q52oq2up10d0yr1e41kl2wx10p2ec0bo0ho17k14h2h83t934r1jf36y25m19c15x1823ef1zm26o0k71x003w0ai0u60l824r2p72vh1aj2ix04p0qu0rl12f2kw3ig3ow1b03hs1ni1u51xo1jn3pa2sw2j619r2bk18j1fh18v1i32b724o23l1h71ie34w2zf1bu1ps1yc29u3b50sl2x612f0fq0v00iv2z21su2g31qx2wi1ko1x027n1v92q62ux1jh1jb1rv33l37q1pw1l91fn2nx2nd19e2b40d50lt1cn1a02pz1zw2yj2vf3dj0hq0e32nu2w13b01o61000090uf0s21bd0n10ew0z11hz0ud10s0jz0jy1bz0zw18e0eu2x93o73293y00s60hx27w2qb3kp2e02hi3it2os0220ce3gv36b2ly2g41vh1st20815c0xd20s1ve23m1t237q2942vj0no0zx2ty2233001et1h63211wu30d2vg2sx2v41or2wq1l72mo13615r1ds2uo2dx1l62ca0x116l1b50ku0lh1c70xj1a52vi3pb0kw3fe1rf2is0lg0rn3jo22r1yj1vh1hu2gy1j21rc1wt1uu26314o0gk1h10nl0kx1af0t719a2r735n19q2ry18t1cb1jq1ey3852rm1ro2v81r306u0ds2t42vt1o52t23xq11r3gb0np0sn11x12o43o24s35z0j139a0570fp12f0fm3eg2p035h2jr38o0430cd2z22ty3di2zz1se0y13330b10fh0zz0y422c2901io2901gr1ea0r52f32fa1kk1zx24p1971su1z41w81jv0ze20j3563jr2v43t80xl0q82zd2io3rq1ws1l91pe23f1wk1302841ol1to2pc2fq1nw20m2es1u42431x325m2a114z0ry1t90mi04g0dx0cz1bv16f2el0fe20b2662ih0al0kv2f030f1ge2bb2cg0bp0ew20v2cv1nq0m22ia3752mf29d2ga2fb39k2nx1392lz0hw27x1bs0p803s0oq2la2n21w80h41i516c1ey0z20w21wr2n21et1vb1hl10n0tz1qg1yp1er1x62341y61p00sk0v31g01wl1wt2em3tj2aq4662fp2so1yc28s3ta0r31a43jf15304u02738k3gb14w2r22rb1l12n71m916f19x1pp2y32gw3vb13y4fs1yf21m1qq11s48t2ab3cd05a2v20yu1530ex0163fz2bt3741zc2o911n14a20f27n36v2mb2921el1tq28j25z10719t23k2ap2rz3423am26j2462jg2w936l15p1qi0zw1xy02s06r0ud0xu2263o52jj0xx2042082210991402e33211050ph0jv1w81nt0si0qg0or1is22q2js21c1lr0xj2q12rx1wd23o0yx1oq22809c0bi26k1t01eb2633az1ou2ky0jo0p81st21g3332zb1e42lf1mi12717b2h62rk1fz0zd2xr0u02fv0v80ay0pl0p02vt2091vf0dn1740qr0dp0m20i71st1871o10xx2ap0ks0cz0ru0yy1p82503bz0gz3992cb1o80lp0gq3ff20u0ub1eh16o08g0551sg1eh0vj2d42vd0k83es1jz1ba0ex0jk2zh1xw12j1si0zk0pg0sb1kj1mg17k1un1vc12n1t025f2131771091qp2p42gz1212o10w00lq1hc11c2kp2lg2sc3az2pe0ud0y72yr35p2se2nl3uv0yi40y0fg0ei1490wa3v127e3n50o92tb1gw1jg04g0nf3341yn3cw1fr31u2fa2hv14h1qr3kp28p2n622x2q70pl0ks1em1uf2r92mh2b011n28y01102p1p612z23m0yz0y51y41rr0y70mz1vc24a0z42k336z25c3180k90ma2v51x830y2i71ys1v61ob23q1rq1sb1v425e2cq1bm2221gd0aq0662np2av1hd2811nv21y1ed0rs0ad1yf2801e50qb22a0gr2gs0f90dh00509l28r21k3nx1tr39t1nv1p017c1uh3k03f42131nz2x00zs0mx1is1id26p2bm1he0xv27z0u00ze17s12a23j24i2h514g2pj0wu0ko0vq16z2o42bq25x2rs24o0pk11e2qu2n627h2j841k0124by1h913u0ku02x49x2pz22w20y30h1s02ln1fy20c2d626928i29f34z04s02h21c2ca2hq2ks2pe2ip2na0hr0x02ok25u2ts3cl2gx18s1v40nt0jx18h1am24z2xp2ra1e82q12mb2251981bq2tv3rc2bm1l11iw0ym14817u1k92531wr1sw1z92ge11k1u32ep2f824f3cl1bd0221ki0rl0nw05r07s1kp1tr1t81tt1tc1jy11u1xk1i624o2j71lu2m41ux22m2b22j52n01hh2rm3780py3bo1qj1uh0yw13p3bl1zz2n91ln2qf16w10t1zw1lp2xv2da21t04s1iz18s1l70zu0c21sn2vk30s1zd2tp0dh0kp21u1tv2wt1vk2y41o02cw0wh1761jr1sn2pj3cg38l1ek1ww0880ca15n1jr3121gk1l212q1f919q1jl0z00uf1hc3ig2ph1qt3ik1yu22t1kx1qw3cy2xl1yu1pk2g31sz1ss1jj1l726j29c3e02hl36o10j19c2142vb3dl22e2pe2362li1dz1h922b2022ny2022fe01g2fi0iv0kz0xf06i29w28b32d3692hb0no0fd32c34b3022a93js0h74321050gi0dd08s41v33834d0w51wl1we23318l17e2l63j32lz19e24r07j03v1rq1082cd2fs1381s91ec37u3aq1bm1v910o1sj3l31d73et0ji1kl1ah1de3jm1z72131tq1sq00s0aw1qn20r1zr27a0pc2pg13q0v90yg22g2j10s81og2gg1pc2b81wp2bv1101qb2kw1l52ro0gs2s722h1n30jd0ok2t03ly2yp0a92bt15y1dc02a0ad2rv2i22a91102i72391mb14y0uq2ap1st1hr3ao14t0aq0623jw33x1jz2th3hq1m73ok0ui0qe1no1wn3pf1l52ql0az2y720l24204b0bl31l1mz40527e45x1b420z1k01r93s81ti2pt11g3g708c0i708t1752yp3c433u21a31g0fs03b2gu1yo3fi25q3ta1h53bz0v20md1gp1aw3wt0t31130c40zb1zd19112y0ho0r73280dg0rx15d16n12d12x0ye0pg24j2xt0k82wj1gi1tp1650nc2xk1681pd1aq2ea0ue0rb1gz14y23o24b2su25p3fk1gp2121k225t3562mx1jz12v27z2c91vb0uk1771mt2kb2js35729u1jr1oj2x334l27h3fb1ml11q2rd0590ao17e1571sr1se26z03i2hq1jr1un0ik08g2c12cd2nx1w522d0cc0fx21r1yw2gm1vs39z2dk29y0r10fy1yu22d32u1d21ks13m1m81z217h1661b81l92v01ew1f91jp14j0sg0kd1gr1k62ln28g1oy2uf16m1ae1yv1t72jg2hn2fd3kl1ug00u06u3ed3r72862kt34b2qt2sr04i00v2hg2yx2wg1w42kk1uv3kg1oc1wl1da24y37m1oz1592us0lq0yh17c2kq2lr0v32c63hb2ug34k27x1qx2kb2pr3923151ex3ao19k1la1jc2sy33h1gr3b21gj22t2i70tk11w1f71t31n02t016v1aq1pu0580am1la1im17l2bz1ia1m91o510e0ww1eq1of1i12hc2yj3e82nl0xy1gb2ro3c33662bl26z2432jh0nk0d01l01rm27t1oj2qq3k237j1su1it3fg3v72rf2bw2ly1962mf0mj14o15h1422nb1ho2bl1lo2ik20o1kk2fa1qh2ic28l1zx19b1jl0td11d0yl1hr1qt3bp1be0pv1pw1p31we0zl0nc18a2tm2h521p1kc1bm1nl1v31un23o1qu15o2dx0q42oj28e2m72d10sc29q24705z1ed06l0om02h0lm1pc1ss20s0091qb0vm18e04m01y1uh29y1nl1wi1v41a91f521w27n1r02yh2ht1qz2nr1vc12z16b1us2k12pu23c1iq1v41bs1n82701gy1ye3uj33u1bx32b1xj1ir1c11dj30931u32p1ty36o28n2jg1m21tv36z2fv1su1gh1m904j01319g17i1ra2qe1ux1832211fm0lf10d0w01sn26u24i1h92an0u11420vn1bl26t1ma3p634l3sh1571la2i332u45634d2pt1l32dr0c003v1i01nm2nf2xr1wg1f92fm0k202v1jw15n1x225z1ni1h41xk1a41nh1q71om1ps2hf1sf1er2ab10v1d91as1bk23u32x2zq25h3cv1990t82qf21q3692u52950g92aa1b91940rs04c28p1eu1ii1ac1gu1dv12i1c71df1a82gr2hu2n32lh18223629a2sn2qf27m1wf22j1k61010m11te2go23w3021up2pr2fz0p50y82n82nm2242y91ny1em22z23o1wn1ai0uy1zs34n1cz1lh1rq10z12r1rn1rw1fs1mi2m21o02s00e000l1ad1e52u81tx25x2o92ol05s0682oo2l22li30336n15t2s72hp2k914e11i31c1y72492h91wk0db0ih1oy28j27x1dj22s2ad22n2842ag2t12je1uh2n63cz0tc3fo1w61p71ex0wq34i1z61eh17x1eg0df0sd18i15w1ud3f40n72d30l31tz1ja2512hl0il2hx1b11ty22r1l320e1pl1t11c42ew3qp1dw3fz23t1yu1qg1gq3ry2351sc1an29l0sj1271xa1f61s83ap3wh16y4991gc0uq1mm0yp40e2jb3qj0k13sn1i029n0zi0a43ye2292ii1np2ap0so0u81iz1rb2eo1tp2x80tl2a41td1k40rf0zm2kl29p1uj28920803i0ys2sh27u1x01pm38217033523m16s0y517f2vu2y71yo2fq2ll0us0l82kl27a1zt1752ls1ta2rv0aa0a21ug21n2vq2882wx1c42jv0pd0f71fn1472hs2ow1s60vm2qg0ox0th14i0wv27c2iy29h1nu2et0ww1582bz1vk2bl1ve2q81gg33s0x21dm1b61f22y12q02fm1wr2081ox1sw1hz1vo2gc1rn1vo0cd1nf1rg1yl1ij1871wr2au2wc13q2il1cx1781qk16b2nf2pt3n121g3sx0cw0jg1bg1xa3i32lm3oh1kt2pa0cg00u16w1hc3bi1wc2k51x72dx0t80r11ke2582ca31y34b13n3b615i0op1qu13135r2d929c1gz1uu0i900n0xd1s42402ru18t25c1iu18i10n1qv22718v39b26b17i22e0160a01of1cq24f3062kv0n32i51ec1e40nx0k22lc3083cs1k62uh0nz0b11yn1dn2zd2fm3r91dy36e1171mk0j31kb3lv2sz2v60r633e0sk15k1bj0qq2zx2g33l70hp3vu20q2in1f50kl3wj1kh30j1wn36j16j0n925a1u52zr2i22md0pd2041641340ry0nr23p2h12ne1cb2kw0120ku1ge1kt2kt2ob39j0sn32k0rm0rs0nz0p939s28i2ck22b2f50n10tw2912422a31uf1o12e01591sn1qn3462jz1hf2px1cf0y61kt03h08q1cg16j1d31i52kj21v30m19t1st2962512k637r31q06e2vi2o625j0ay02j37526729c0e51t51t11xn0z60o920m2gs2v62i92jq0590hm1yn2lr2wm2nr2xt2e93om00803e2k92gi3ey2oh1m21af1ep1ys22a19x1gq1gs1g13gp0x537o1s71ly1880yq3ho2tn1m00vi13u19j20m18510c1ay2i32ox0xo21z11z1l71cu1172j01x82x71hg2tc0rs18l0kk1ba2u81uo2wz15e2we1k21hh11s1df2wo23x2q91hi2e51d519m1gx1f02nl1ih0zv1h613k0f70vl1co1jc14d3dm3dp1af3f00jt1uz1ud1dq3aa38d3i10jj35w0ww1160gc0jd3li2ld1nc06y1qr1yb1tu0k002g1f826d2dv08l2iy06t0dj0aq0aa2h526y3vq2kd3g21w81tw2a62fx3rl2s62ec2b41du20v2a82d92dy1xz3ee1zg1bo2e509a08e1og12l28v1yo2620s41ro27f2ww0zh0ty1p91mi2b41hj2sl17f0v71uv1lj2q539q1o622t1vw2gb29y1ag1ud1sc17m2nn0rx2md0jb07g0rg10c2ws1ox2or1kv3f210d0t71am1u22yz25v1li1ie0yz35u2c30fu18h1dp1co35j0m62hs1ei1rq0gy0ec2y43021u329k1ff1n811t1u823z1es2ue2da1gg2c60gr0ij0yo1jr2fw1yk1ie1l61j20f60ek1n91t61r833s2bh18l24q2801n31v811i1zv37j2iw1cf2du1x91bi1ng1ja2mc28t27q1vk1od0b502g1is1qu20621b1fm20s25z08d0na2ah1wa1u33pk1po23v1r914n1g421o22x1rc2rd1oz1ap1312zn23u12l1k01cj2h12qf3372x91pj19g3322pn30t35n3ap09m26b20h1ep0fa09q2t12i21ht2ha1rg1g11wx3h72nt1mq2042rm1yy26j17i1f11bq1rb2m82d42fj1553fz0pa0q11mh1d82yg2yf2vt1hs2lb0mr0qv1611e82rv13228p2gi2rc1je1ro23u2cu2hk24y2g62b33bf0bo0ev2jb26c2u23621up2001l42ja2qn19p1v21rp1zz2db1ww1ja1g50q01wa1wg2bh39p1i92181bf07i0kk2br1wf17u36s20l15n22f0ni0n20rv0tb22r29w1z623d28o0000gd1gj29d2ah1yp21c2051kz2o43822rg24w21724y0hg20t1xy3zx3601rc1ym0ue3yk2jr2cd1lj0td16g2ic2fn28k3h02cs2nj3840uv0s633a2ue2m22e43sg0kc3ij0xk0gf0gn0ew3g91xt2762z71921781jp2aj2od1si2dy3tw2zu3os0p40dr36h2wm43g2gr28g0xh1u61ie0nj19o1092201jp2a524v2h41b21nt1y41vh25n2d42hs26k18i0po0z81ta2c31vb34q2jg2e82tu0mg0y91xe26j2og17d3k50nz33a1tt1311ap0sf3gc2tp2iz0tf28y1ax1m80xn11q2ch35w1ww1ad1oi02s0ho1f80wr1s31yw14a0m50g71sd1k709q0ay0ho3cz1wb1rf1l40p407t1af1fc1p01w02ut1532r81ty1lj1fh1ik32z2l51m91to2001dw1mh1dl1lq1j524j3tv0vk2hi05g0d91bm1bc37m24i1i71u61r30zb0x31ze1wv1ja1xm2gu1dk25h25a1rl0jj1b72dd2qv22p1ok1ca0ck14p1rt1ns1sk2u71o328a1i10sr13p23v24r1o329w07z1hx07o01z0mg19l1e70621h42sp2w52vq1ht1co2mv3152xe2kb2dk2951ws19m0yt2n526l27m2kq12o1ir1be2m51yr26d1g519b26j2ba2o32nv1170hy2jg2ma2i63gu30g0zl34p0i40ia0ef1902y71cl2q61l82t92062851ns1i02tv0y22xs1a83f808s0au1hg1dw39i1v336f2kl2ge12d26a22k2gg2w32r42n60qn2on19c1df0yt0vw2mg1nv3wq2ak3p71g418n27o2ik3uu1pj1w60031lx0p50b40ky01k2042wh3gu0gz41r0gy16g0900f23qq2lm1l925k1nq1v50yi2mp20j1r52jq2r508829n0y80t00kt0ha2s62sp2a038i2eh0yy0t23l23aa2ik21w2zm0gz38q2vz2zd07g0e031k22x2hj1wr2ho1fr0xm2021m629s2tc2jt10q36m0sq1g21zg17d2yt1hg2br2632fl0of0zt2be2252bu0zq1c31r419h1wg2891nd1gw1ae21p1jc29f17w1000i71io2di1lg2w134h1g63ur0x60o81k41fe3f82h02xg16w21j0to0s913j1cg2ig2ue3862oy2xi05t1431na2r734k12j1jf0rb1ni0va1a31hm0ui1le2ic37m1f02to09e0bh1hl2003d32pv2iq1ae39v0u61fi1qx18l2te1hb2092642iy0it09x2iy28x2el2ui2hf24z2av0ky0wh2fd2eq2en28v1ve2xd2ae1s11ov2ki37121047l1ha1px2941re1l91gh1u91tp0yy2kf2bb1tg2o92v622u22h1v235r22s27r21103h09p2f12li1ys22l22v1r322q1f90n51t81xs28h1be2co1oy20x2qn32729m1pb2d31zm2e30iz2mh1mj1ad1370oh2f82hi2s216i2t70c00oa0u21hc2th2ye24j1p71z00c00hq1l21pt1ru3dm2hf3mw2ua01t0gg36w3ax2lm36y2bu1942rp15i1cg1qu1dt2es1pw3ix0ev3f909m0h000p0933gz30g31i15r2yi1ae1381gz17q3482k125b1ua2bn0xb0kr1gb1i42hk1ws2jg0iw2nm0x112y14z0hy2iw26m33k10f2t41f91ew0u514v2xy1vk1l20xy2nx0xx1000760ow1wg2c62m41ky2l60uf1fw0s01q22of1v41zk1w82jg0p10mh1fk1vo1ub1oi44p1wk3w60er0er1mk1u34ae2lz43a0zj2ov2du2iw0fx0w73o52pb2fd1en1wn1gb15s19y1an22827631s1mn32t2pk2oz1id1da30735q2m206v1a30n70wk0vj07n1xf25k38m22433i0z818424l1z835824m24a0tk19n1md1s613118j1r22q01j223r2dx1tl1jx1z02op1s728e2ls0v71q71j01vt0jt0kg1vt2d81m81fy1na00z0cm29k1dz1rs0rc3420nc3de2e92p30d40rs3jo2bp1xy1bc22q11g0wv1mj1i31zc16q3870k53tq2hx21i16r0ru3ft1k72ch26a1lu0mx0g32r72681uq1ho18h0hg14a08f0210r30t91ck1o62ps1321vm14n0il0gp16x2ig1z52lo25d2x30650i21r11sd2r820j3an1t63e70jy0td2ak1p53px2q31wa0vv1w90vi0or0yq10521b2ga26f0sg29a25z27p0od0y121h1531yv1dw2fo0vg11n1w219f20v2d71bu1oa1ab12x0ri1uq1ou14j2if1l81pc1hd18314w19l1k41mc2412ik1t92hr07v0161fz1pn2l929z2lf1tv1ni0ti1721vu1v621c2fk1om12i1mg0pz0lb1a415r1jo2sc3of04a34h07j06v05109f37g1cc2kr1692a326f2ui13o1312bg25x25u1nb2da0hv0py1421jt2k338v34q1ri3o30ur0t51ap1p03jt36t2vl1hj2yd19h1au1d81i22vc2u91te1de2j11st1t11p41jo26q2n92492001wa1iq1o02na27w1sf3c42av1nr2tv1cr1fz1mz1pu2ap3hy34q3ni35q0fz0ht2su3e631c28h32r1dl2ug0p203a0om1jy2t81ps2ys00h3980mi0ex0gh00x2xd25c3le2jj3aq1310qr2gg2gn3n74852k41rt2cb1a90wb1ge1qk2hh1ch3he1xv3p60mm0rq22y1ry3p020w2gx2an2ws0i90gy1rh20i2hw1fy1go36e1ji1551bw2fp2po1eh2e42a21jt29318a0u51761ba2g71km37u1mw2vd0kb0fa1om1x339t28x2gn1kd2wk0yk0gk1b11fz2wy1402jb0kq2tq11t1hl0zp0pb2hx2p21ol04c1sj02z0ah08202o1ro32i34e1nd2cr1bi20x1tv1b72wt22t3v01qa3ph0eu11t28i1um40m28c1ox2ul2m61tz1ln35r32s27k27p2sq12t2sv0ho0qw1aj0w92tg2fd3q60kz39g1331fg0bg0m03im2ah3u017d3ts1ma1ii1v919f3ve2se3fg2k93ly1hf1kv1za1zq3o732q26i0ue21l2h120z1qn0yi27d1t91sj1dw1xe0xl0md1fd1jk1p524h1vz12w2fm0160cv1pk1b320c2vd0v70yy0nc11v1sq1d70vc0pa1fr2vd2qp2xm17r15n2122vq2nx13j2y41p52fr0500mj1lx1td2s62gd1ku1mc1uf0s201r1a81ef1ap2md0s20wq0xc1051eg10s0xx0n81va27706k29r0tm1p60f000724h1yh2bm1em21a1ci10v1kc1fw2501ug34h2lm2ge14m18n2jv27t2wh1s21px0vq1zb0vs0n81tx0nt1xa2qr24z0r01ws2ew2dm0v40lj25p1l43kq2a434h0x80eb2at1ys3aw25g1a31h11ql1lq0u829g1is1hv1r81op1rx1aq08d0fn19i1r01jg1f028e20t2md1041051jy1z72dl2uo2fk2aj2p01p81qa1rd28b2ol1zs2vz1ga2ty1dz1ce1hi1ok2qg2fj43c1x34611gq1yt1x51yo4b41du2k60pk1nj1ix0un0kl0im24r1uu3qg1qa4bm11415t18q1mg3w92s518d1fh1o10ka0mj1j61my1863wu34r13q39k08j08h16r17n33r13f2g60hl26y0hi0s713g0lm22t26v3yh0t840y0u40q70ps0tb3zk2ki2i817w2ue13n1ar1az1jm2u61xn2k71yt2eq1ot1kt1c622x2l12u838q1p13c90nv0po1x91q43ez1s329r22l1d90xp0y81ts20s1rn2er2x10rx2yn11m14g1a30v831h1zq1c61oz1481oa0m31ko1uw14932g1bj0x51hu11v0sq0jq1401j91wb2fg2461vd0s10vr2241jz1zu23j3961yz3kd04v08z1dj27t3m62wd0ot23j14f0az0fp2fy2ap0ys1oi2xz1k02f11y11sv1xi1qx2vo2cv1yi0y720q2351vk0de0pu20w16u1py13z2ce1zh24014z17r25h1n61p426p23t2s41o424d2fq1x12ju2ku2nn2wb2e62e11y02842io1pb1rr1dp18h0ib03m0y61eu1k11z82tr2p232l0gk0l22c42kb2yb2ma3g01k23ly0bu0131kc1cp3hj1yh1mw22c1nk11o0y92gp2au1o22tm36i1912vz17e1ka1s71f43152g51d51vl24y0hq00v24727h1ix2l121w1o511c1sc1ui14r1m91fa32x3ev0nr2qv19a19r02d0gn2y22ig2141kl1xz1an0x81hj1el21b39j1pe1mc1uk1jr1vq2cs1jr1u12vl2k42962100560bq2mj29x2i41zp2yq1fh2ir20627120a1f52s53433290si2v51pk13j1660j732h2h72a02z21uv0oy08p22i31120t22k1aa15n1ke0qc0cy1yv17d1ny2hj19w1as1sj1mr1pk1ef1f818e3021si2f31rk1us1xr1wo2e71o42lg1yg09j2em0o90mc0kx0d527f3fu2uh0ki36201n0ej1em0v02wz2zh28d0cw2390je11312n0rt24u2mz1up01f1ez18e0xw0la0241xo1oj3rw1263hf1fc17j2a31653s627c1wl1cq1v51jo27814j15e1uw2cx1z51v21we1320ed1ma20124w2qt1k729e1yg2531ns2ww2lt1jn2pi2hy0lj2c80v11dz18r0ka2ae2f424g1vg1w32061zy1rq1kv2422e02sl1yp3k71781pu1or1y230g2rc20k1u02dh2962l610123s22g1s91ux0m91br10f10i0fh0pg1tq3d02g80002631kk1hp0vy0552ai11u1vu2e31lx0gj0ay2ah2mn1mp37o2mg15223z1fi12d1a518w2p02ac2jm13i2xd1tv1x11c01c62r22xm3010v630212b1ju0cg0dr35l2jf24y22y2pg1291vn2ia1xe2ix2j11sm1bi1km0gc0321751e41id2nn2p21ow2sg00o0171ui1ps2u72tb3x610n3w80n10ty0un0wf40n24127v1bq2tk14p0vh0xr18u2j92yc1bx1dg19i0tb0ic0y61ht1e51n80vs21a1hl1c61iz2hp20p0wi2b82jr2zm2e82g728s2qv30c2kh2tx1zb0kn1lo0o10150wy0ml1t82xg3jc0tr4670s112w0cg0y23sm2ll29s1hl25e2mn27v1by1eg2e122l4fn1q04e32fi2kc1d323z4id2v92c11z03411b71c71q11v62j81wh1l70o31sc15p13q08f0pe1tr3e92wi0kb2kr2yn2yg0ta0de2yj29g2d30db1n42yr2od03j0bi1z51d41vz1lu29n15b1zv27m1kg1xc1ks4fx2514ml1ni1vl2k72f04g42cb4di1ww31z0b308b1vt1uu41f2eg26n24i23w14s0o21oa25h2cr3j41kr2dj2b11dl12x2211y31n31o92pa12s1y50e70wf1ea1ey2d52c82d11p82nf07y0c61mt1s42ht1ns1kk2tr1y006a0rs2zi2j320m20e2qj0et2av12p0cc0ri0a02ly3cr2ly2nl3a519l1d71zy2ku2vb1m32sl0nn2kz0my0rm1ce0je2u42oe2gy1ro27b05t08j1bc1jy2m52k22wk1ho2x91ag1i31o21bz31i2at3hk1d63o61qa1z61tr1ky3gu2mw1va2p31g11bn1ij2r52gx1ro1lk1aj1f41pj22818h1kg1951ge3c52it25v2a41yd1wb24427a2nh3i430n0n42ji0u80la1f50ur2y92ce3742v52py15j18y2st2lz2tl3t62od1xx2my0vf0rn21y1ri2ps22h1i70sv1r911k1np0sx0ng1jj2k829y2s02j81a41qd1xx2ad2kr3762dq0sl25a1nu1nd1r00ya24u21537m15p3ii18n0jf1860vz3h31gn1tv1051sw1pl1em1bh10b2061bj2gz24n2wo16n0oa28f2972ns3l52m50t82w20j20xc03k12x2t61zl2182sg22q2i52dr2zj34o21527708p1rw0tx1cx1qt1b31fp0hu1mm1zf15j2gm24v22l1fy1l528z2wf2d61lo28201q0421ia1gm2an1tz4nm1ut4pg0p30qj26026q4q420f1742xr17b29i1z33hr3b00yo2i02jr15q22m1z81yx1fz1a92ff1np1xu1za2de1l618j35x1pq1zi27d2jh22w1x720v1vc2dc2en2e636i1tm0qv2231om1vu0st0x51wc2kv1of22j2f64a43gi1cs2211x52e82hw1cd1z90lg0wb1xf1ru25k2g420q1ts2j01wd23e1km1kz26m22p2ly30b2ep0900zt3h035t2gi3jp2ca1ig1ob1m00wx1l31jh2901ta2qa17g31720p1zk1ia10p2ou2g11nf1cc1z50d10m01bv0zz1ta2dw32k06q35i15v0yp05b0tl2yt2xr28f0oo2q01pn17807108a2k42zv2h30xm21a12j1ua07s0pl2e42am2r30u81oy19c1n100l0r32fu2ht2512py2oc1be1f22rf2n92712in4lk14v4p30ef04l1tw1ig4sx0wu3m82dt3720yl0ym1uw20z3x41c12f90zx2qw1io2dk0l60zs2gw1xw3x62rb3ta1890x02x72ts3x21yv2md1yz2kg14s1cd1vy1vj2nk1kp2o30ns23a0sm0ts0zy12s2ih2s045s21j37a0540cc1vu1rz3yh2be21822o1zj0l90aj1t52041se26k2zr1kn2u02911zn18x1p72pw1jf2n01wl2yj0zv0ra1yg21o30a2ac2ku1312vz0vn0p81dn11o2fp0oz1z91lm1mc0vf0uc1jw1p31ur27q29m1u02uy0d70jv1re1se2dx2cr1x11oo1sj0r30ds12a1va1ti2gq2mu1em28n17p0k22161cr2ha1cl2az2au2f11pz1wv2f62e12d52gc1l316u2041670tq1hr1bu1kg1o71w00g21cz19y0rr0ff0k51q91ta29c1xx1dt1fd1vj19f1yp1w92ra2qu1wk2ew0wu0xy28721d2tv3k32yx1oq2l90qw0ra2bn1yf2up2ch1rl27k1qa1ea1fc1yz2a81wc1t62f520o1eo12q1721cc1pp1wu2fj2sb1km2yb18a1dz1x21ru2hi2w70ao0yb0kp0k10ha13m11e0c02p50vp22t1zv0ht0k32cg20w1ex40a1l82m71nq23e11k27h2pu1k61vg2vy1go2hi11k0nk20x1ho2n42gy3fp1xt3cq0u60ld1su1md37e39r26717y25r0jh0z31mu1e026j38d1yk1b93ek0mf1560r41842rj14038519j3b41581fi0vu0xy37t2b93bx37g2pg0yg0tp2rh2zi36k38c2jy2bx30h0us0qq2qz2ja2wv43l1g521p12u1k41nt27c2071be2qz1zr0yj1rl0oi09e0m314a1rg2361152fn1611pn2bb1s929s14a1ox3801jn2my1wl1hs1cn1jk2xl3on2mx14o25402i0fl19f12r2fu2rj3rr2i938t1af0kf2th2o53q01si20e1mv1tf14l0kg22i1ro1rc26t34c2r02y408e0la2h72rf36o2i81st2qn1k51b11aj3062op1hw2nf2bo1ud1xp19d0we24n1vg22w1rc15414z1jl09w1fh1p911l19z1xp35g24y3961pg2kf24g25c3ed1am2851rf2ve12o0z927h1ue2oy2yg0z60b415d0ra14v0rj01e12i23r1741ml1et0sn0ii1pq1v415l2lp2oa1xt2r71t02dr28e26e2j736y2be1u72s51id0sz1te1g026o2g80yk2gk1hm00007z2cr2en11p28u1u42ei1v81vk1j02492h920d2fn1um3e11831ce1n93573ml1na2cr2hr2e32ik2rz2qj23o2gg2ei3310u30yj1bo1na1lw0jh12o0uu2i93d412s36f2wn2u81720lq3ek1z81ti2at2f136o2r91rb23l2632ym1lu16z1qr0po0tm1i418l1f332o28h3892q10jn0xh31335l2fk1hl22k0vs1wr19d0y329v17n1u139e2do26e2ib3dm3jy2012402c82jg2mi1ni27i14w17o1hd1v42mq2hn24o16y2tt05f0ai0z113n2ne2xp2pt1zt27j18s1zx15w1ur27f1yq3me2dw2zt00n02u26927x3mn2wj2a026j2f21h31ht1nv22v20122z2zx3av3ee0r10m43533e238y1ek27e1an2hu0q90wo0w618g2kj1p62gb0c12hi1e71m50ed0732i42ny0y310a00k15l1qv0zu0u60kw1qc2bg1sf2ke1a50z222z2312bp3b420g1j82ee1gf1rv1a919r2mq31r1x70s71j30960b211r11j1o434z3231gh27q2h22xd0xa19s2op2e41zc0nd1f32ds28b0tj0r21vq2h224a22w1s51dt1gx23623m1xy1kt0yv1cs1bs05t0fl1fi1dx11x2xh2i729p2j10vk0a51u628k2g52js3fj1fb4ct1n51cp1vd1q93wp2ny22p0gu21f1ip15m0ft0t21xq3cv2ns1461yl2082nj0qj12i2q01xv3hb0822za19w1mh0br0iu39e28j1ff18n1fd1i01l417j1d61712il16y0z91k10jg0p81lq0sk1dd1qk14y21s2an1pb1ua2g723e1wg2762gb15v37d1jq1wy16k1bj2u82ma2bg1qj1jb2dh2ci2821t31yi2442od0ts32k1rs1e40ry0my30y34f3sm0ch3s524p2ce0ns0e74191dr29x0232m90dp00d0fi09u2h130a26x1ca21p13f1kn19o15r1xv2q12zt1ws3b72gu1ux2b722p3621yp2iz1yp2bn1211051px27g2el1qs1ot1v11ir2hs2cp2hw1oe1dr1141sy0ie1pv0iq02g0px0kt1qu1to13u1gh14d0fq0vq0t11c913e2ym37a1ps33j11z0sj2hq1zo3an2a33f71ey3hy29x2pt1ob1dv3j031621h1oj2j10o10bm28c1yi2aa1xk1f60ok0zb2gw25n06h0aa17g2r22fb17u1y518n0xl1a60xp2dc1ve0k61lf0l71ra1i51i61lm0k21pw2ij41d25f0gi0li37q3wq23f28y31c1ay2ez10l19s1bo19p32d1wk2f61xv29z03k01u1sk27r2hz1d23b51go2xy1pd1zi1911hu37q27a1fe10q1oc17l0wx1js18w1ix2dp25q19h2ck2in1sh1691no29g33j34v11x34h10o0u31bi13q30e2w527f2j321518f1852r02c72ib32g2nk1g92011gv12g1mk1hf2de2rc1lr18b2dh1bb10g12g18k1t32iq3ec0wm3qd1ip1fy0hk0sm3e01k12p51mo2km1zw1in1bk1js2nk2eo1ys0rm1nh1pr1ud0iu0yw1rt2ol2ac2d12cw1bm1gn2ix25z2bx37q1sa2tl26t0k10oi2kg2qn1zn2ql2bc0jx1l601l0a10nf0u720f32w1uc21c2680vm16m2k826f1ut1oe2w91o52ms0u90uh20b1df2w72431kv2uv1f41i911f24i2kt1ly2kv29g0t127a1re1j313d0qq27a3151jy2mi1r81r41pj27f2ml1xz2842va1et3371x326h2621z22wu29i2ye2ft2xy1kq0v11z52ic3052qm0931yg06h1eo0r91hn1jw0201mb2ka07a1lr0x012i0uq0n025h3b222o0472gl03f02s0sd0102dg1rt2rn2mg2oe1q91jm26p2ms2mx14p35v1si39p0zg1rm1dj1pb3272bk2sy2gh2ck0oa08s2hn2bm2pu3d31d71ap0r004q0ap13w1360rv2od2e31hb2eg1i916g1qi27n2fk2s12o11y52kr0ug0791nf20r2pa2c91zf1un13015p18126b1nj1ix27y29012d1uy1sp1l30wq1fa2c91d02rh1ld2qw2gr25r1qh1ns2v20x436e21o2b20u10lq2351vb2s92fp1o83aa1ig1ct0r42f835h1fy34i1q81jt1kr0dy0mk1b91ul1k02iz1w92652ar1f91rq2281vl2el2p71hb1kv20n0js0xy1g41p71la3aj3231iv32r0ly0370q819x34c2in34p1rg31l1rz1ul1ey1mi37228m1x61fu25x1bh0yz0vf16e21r1t52vh1ou2lv0di0ae1gb1rf2lw3ka0zy26u10s1cc1g32a527p0wm2n12fs2ma3rm23v2aq2he37j2uo1qd2ib0b32ph0s70w50tx0aa2oz1lb16m1im21i2vi1qt1g51n01kh33634x1d930f0zb0xq1g01e23671oa1081810el2101xb1s418l0v13gj2091ez2e80wp1ng1e01gk2540m32qo0nv33a2421ss0tq0m730e36y1mq0kx1mi07y0d50mu0j61i32m639t1rk3n30ay0d519j1sr3jl2dz36d0h22wo1fq10a0n80nq31a27g3nt12038s0680c81560xa3dq3hd2vl3jl2i01xu1ys3i23ng2i02r20l727916e0wd1022gk2c70mt1r91y91f12651120pg1yn1dg27f1952pz0n737h0qo02t0hi0gj2v92fa32p13j3f314v1o60f30ny3gf2bb0lv1wd03f19e0ip23v1qr0ek1dk2je1bo2vb1nc1dm0tr0wa2gy2a43ez1hp31k0oc0lm1es1p33bq1yl2l60522wl0yy1c103n02n2w52bj1hv1mt29e2n332u1yx1sz1ud2rh2yn1no3kh1nx18e2ar1ur35x38i19t0a820q14r1c402502b1lv2vj3jn0qe34l1y91oy06a12y3mo1vb2dm2av2fe0cq02d2nf2f62im2jj1r01q81vs0ey0zu1vw1ou1qv2cq2bv16j2qf1sx11c1pj1o12l51hq2a426m2rz00n0mf2er2902h02k73642782sg19q14l2hj2gi2wk3gl2at1e62uq19s26i1xh1lj2ey2c22by2et20w0xg18l2it2lt25u1bx3hv0wv3df1o81t80rz0x23h52c01xq29q20v19719c20h2451rv1kd1g91pq1kd1rv1uz0zs1l21hh2uj2f40y526n2j32eo0up0so2cv2n02da2421k038c3cg28v21q1xx27j2dm1h52il09h0oh15s1862mc23z30y2hx2rz0um0e92ub2gx2vo26m2xt2mj2s73lg3nl14c2gb30r2bj33w1h639g3a33br1qp1la2yi1u62pb1hk2kp0oa1ng1hk1l22x51gi34123621v0800c21db1rh2ec30n24v17w2fd22v1i31qo14k2b222s1z00nf2i42972qm01n0gm23m2f221z0jt1aj3872io0ib0eq1kt2ho3px28k3kk11f0s31yh1y13q02ii29t1vf2a911n0tj27j1va24w1l92p31ra20y15i11n1it1uf2mv1a32ju07a2cm0yh1730ob01v2pt1y93jo1vw2zm18v14z2li1va37g2k52881ea2fw0s81d62111s72fd1v60um1r205f2dh1y41a11lu0fr23g2w41ke2lp1i219s1d91ka2pd3mm2kt2e33d31ok29g2yv2gr31z16c23i1v72p11qr1tw1fa1oq2441uk3tb0wh2rz1wp1ed16h17e3cc3hh25w11z27s1dy0nr1361ka2782ac36d2303jc0dq1bw2c522m3eu1vn25p2491ao02m0o024p2601tt31b3921hq32a0u014z1us1n73at2ck2fh2gw21b05p0q327s2ca29o23l37v2b03q91op1qi1o42cj3gb2fm1mm0341dy1580sz0m20ja1es1wq2qj1a434c0xn1c516n19n2te1oq21b1ys1tv1ox1oz20g22v1mv28t2zn1ws2fs0bj05h1ix1ut2sl1ov30810k3f41v11lv16213c37e2bl28y2032kg1md19r2gj2qg2iz2j82lo21927l0sr0no1zr1wy26k2ua2y91k92nq0ev0pf1mm2142vj30e2gk17t2rh18w18h21r1ie2i722b22y1wm2mx1sb0tf1bl1sw2cx2mg2iz1g828h1i219r1j51lu2bg2ma30o1v52rt2ok2ig1t325r32a2im2nx14p22i0790eq18a0yf2p020o2em0iq1r030t31d1bg0ob22a1oi1xk1te2pa1ac1032nt22r22p2mi1bq0031z20f109o0df0fl1gg19f2r80rv29p1ke20x15i0v92jg25e24v13p2gl13r0wy0zt17v2fg0ql3an34r2di1pu1et1pg33u2y61hn2291s026b0th0sv1qt1tv21r1ru1vg1me2l11qi1xb13e1mi27n2zp2pk2cd2gy30m2x92f72g82lp2qm1500nj12m16b13m06x0ls11o1z12bj2bv2uz0uv0pe2t12co2uh2rj1yk16p20518z18a1ek1ao1ys2v23x31qb48m2392bj1yp29245r27r2672eq1u90z419j2im25s1yr1gk2f927d2vu0dw0n822u25j2ki26q0r00qs0y710p0z10980q90k92962ok1s22c50s00f922j1ug2801jy0xy1zr1ap08411y1pa1w513q2ji2in1h71vc0kf0180rv11q26f2hk22e1ki1ji1kb1gy1561mj1g42l82i80wv2fv1ft27e0ed0o62ib2hj1mc1881xg1lp1tc1nm1jl1r72rk1q01rd11j18f1m01531sr1h627d27e11m1lz1pa1pg0qo1371pv2ft2yt00b2nz1u71mi1em0bo2zh22i2zq25d2ks14806i2fl23d2ra1yc1ho1g11i90d509q1871b31ff35325w24h2qw1of1k92ki22a2aj11x1au1w81et0t910j2fw1pq19s2ut0pc0ql08k0aq0uj03s0nz0d81xk2xb1793dt1g618b0pf1bb3eo1uo0tl0uh1ek1bx1ev0o70n10yp2h52to1m223113g1fa11p1jg2u91e81zq2ri1sm02x0hc2752y423b1t72yl0pr34u1020u70o90gh31j1sh1xv0t21w31vo1un0ly0op1oj26f2190y82ir23y1k91sy0yl2821th1yr2a81hm1vm24w2ai2j61qm3ax2m72ry2yf1sy2c61y82in2s63fa1iy1jo21v02s04x1hr1li1tc12e2br14h1v80x916k1bt0x324p2nf2t31ob2mv0bg0n51uc1og2pb2uf3i51z62kn0e60qj1vg23832f2ne2gk1ae1u61sd1hm0v11f727c1wq0l11ns13z0mp0e81i71qx0yt25x1te1e12cj1up2111251551wq1up3b81tw2230vg17h28p1wz3072201ay2861270c60lv22p2gz13x1kg2q500s2wy1mz1u70hw01y2zx28s3je0xd3pb3063jy1e30em3mq1dy2551rs2cq0p30oo1zq26g27226w2do1142aq0ad0bj1i51102ht1jl2161pn2450w90rt28d1wp1v02fx2ef13z2ta0l31mp1qi1ao2l51w81ds1gv28727u26f0c81bd1up2hs2ib26l2830r60n22b026o20f2zd2hj1yi2ca20a1n01jj1w82hq3ao2lr0yh2f608i04t0zh0o829u0r62t41re31t0b50j21y21b03721st29d2qo2ff0dt0bq3252w82h124m2vs02t3120uj0pc0rb0ac2v32lk1md26f1ph12u1f113p21y1o11ao2mb0tw2z71ev10w0sg0u233p1pi34g1rm2yi1nv1b71sb1n034o2e820q1f91pt0jr0o01an13f1g42d818u3x41kw01u06w3jc3rg12j2jq2cc0p133804701y0qk0nc2vr2l71ne0zg1kx0zt1ce0ey10q1lj2iv2801cu2q616l19h0vc1sc2au2fn2p62dy35n21x2501mu24i2wp2cl1fr0zr1541vf1n41ae16w1992q433525431w0240fa1j52922w10xl2y01g62ac05803f1op1a22st39n22o1r61b12181qi1y624g1xn0yc0hj2m40iw1h31i92p02wn0b81nd0hx0f102w1ar1mb0lq07l05q26b1vc1d02i30k70o91mm1lv2672qa2ws2392gh2c624d2ia2682p20gs33507r3341tw2a804h01r31i2aq36o10v3qn0160i40up1m03e52sy3af1wc37530b2rh1e51zz3b82xg3lr0ds3pv1ca1fd0540gb3k91vu0yc1pj17j1fr1ch26p1v60xk24n2us2di2t420c1fg2av2oq2ye1xn2dl10429z2ch2660xb1cn2ch22m2yn0j72r90j10tt0ae0cu2ld1of1km2bl1pi24d1pz1x422f1h51rl0y31wp0zm1rz20l11x1v20qk2l01kh0sh1rr0i30hl0n70nl1oc2e92jt2rt2qz2ub25k2my2xh2lw2m92c52el1gb1h21mr1nu2f71w72g318h23u0w01380ud2cx2ec0xu2qz31h0f92fk0ms00r0pk0bg2hh2uv2gk0id2ip0or0e80pm0ef2hh18n2co2rl2e11ex13s1lq2ir2iv1sd2lh1kc2bn06s0qd1wb1lr2ga2671m91y429m0gd05p18g26g1rj2au2871fd2d81yb2211g81ga24t1wg2py1p920b0c807v1np1ii2652vm2420tm1xy1go0we0z11h12263jc2jh15e23515e1m31sm11f2co2fh30i09y3m91ql1760qp0cg33r2d72nf26h26c1hg0q31mm24z2ju2u82me0bx2e60ha0qf06p09l2o315v28o1fa2gm0y91ac1981sb26m2bz3cs1jo3ds2jc0rw1i71e13df2x31ur1jb1tt0kf0871yw1jy1um1x134j25p3z81xj1ba2v521d3ia1k31yh1bb1l10ph01710310r1tq27737h1tw3e80i202x2f71vg3a329z27t1ob2im1sd26l2111pj25k1r52ll1oy2ud1xb1sq2hu1to3193lx2ap2cy2kf1zk1682ai2i12e820p18o10e0gf09j09g0aq0tw0v31lp41m33a2vc00b0le28t2q33od2992a11nr25a13k1w015n1r727d2vi01b30p01c16y1g333u2nu01b2bq2qy2nz2vf10r0zi2m62nv2se2m425p1vf30o17p10a21b1v72p21rz2qa1s91no2551zc2ci1rk28l38e0ae0rx08g1iw1g20iv0xl0br2nt18v2lx1ck07a0om2j329y13v2ym40z1954at1ce1e20vx11o43y2jg2gv1bc1vx1pv1d417k16126r2to2ar1tt2ei1l31sy2c31p526a1ry1nj0ji1cy1wh1h00yy0dp18o20f2dn06z2ea1m51fn0bx0d82ew3591cz1b119j0bx0av1lt1g81923a02y40u23bg0nn0011o916d3601lu2y81k92390dy0e71jc1hk2tz2gw3c007q31v0fb0xj06302s3bi21r3ni2bv2wn1mc1uw20z2fk32z1vu1py1l11j50oa0cr1j01d021t2ho3ab26d2u51ki1za34g29o32430p2751cf1zu0rn0pm16412m2742ld3g30vx2rf0h807q1di1eg2xw24843i1tr3tq2112ch1f91w64112ms2fz1h231903k06g1ee1oq2vz23c2ze1ah24z08p0au0mw1ap2kk2ki2xz2572mb1ti1xt2d22mr2qd36d2x71j72q11ro1zo16l15r2rt11624x1nm2af13w0wn1kb1u32202t21oe1kl17h2c92ci2851n51771d526s1qy1tj1gu1q11oc1vo22m32n3rg1eb4e40y71601kp1h447i1x63nc1ki2z70cy03v1h71ej3ok1ka36f1kc2qo06f0df1q61lz2oz2qs2ky28t2hh1w41uy2621t82nu2jf3nl25b2xy15e1e129x28m3hk1p51u81pm15620y21j1tc1no1oh1ji22131k2k71le1bn2hh2w228y27645q21p42v0vm0g032g2az4dp1kl32n25i2vo26c20n0zx1zk3041nr45y2sn4vz1gk1xv31a2tp4fn2dw1vr15f1ve1or19m1q817b21m1pv2471y91zv1qr14l2db1x11x52kt23315618m0o50tq0r51021t538g2up21v3f80do07d1pa1z135d2811x81aw1xp27w1hk1m61f61n72e82st1va33s0yu0yk0t31rb2zb3k61ep1tw1l92101kb27p1yd1ak1ky30u01v30n0w80nb03e08x2pi31t0wh1y315e1p71de1qt1rr14b2z53372223ot0cg0lx2541pk3q02ub34q1013h12bu23m0m90t93bi3413b21hp3j72d02av0nb1fz3kx2hk2lz0tb3421qb1921j410o2l81ye3e82cs3fw1o218e21c2w13h32zo2n41bt30o1qk1ce2o11kc2we30i1o125h1mr0l90641id21i1pj2zw2942bn36m1ha0ed1ud2av2ix2cc0to18k0u814b13g1uj1h30jo1vf17x26e1b60ks0k724g25u1bv2fl1d905f1j02nj27i0b80q81aq2wa1jr11a1km2ki2qf1r819s1mf2y33uw1wt41006q0br2b12833wx21s0xr1861901uj1i31sl16a11a2ic22k0cu1n71jv2170b109y24c1i90nl3go0w10x00zl3g13c30wq2x82wn13w2j527l1yk10a0wt2s71tx21l06g1vk0qn0vr0rp03q21f2ss29r2h21tl1gu1a62p12ov25k1lt1kf1101of07p0bp1js12b1qz2y936t0sr3db0s30k30yq10634w","seg":[1,0,0,1,1,2,2,1,1,1,2,2,0,1,1,2,2,0,0,0,1,1,1,1,0,0,1,0,2,2,1,2,1,2,2,0,0,2,1,2,0,2,1,2,0,0,0,0,0,2,1,1,0,2,1,1,1,2,0,1,0,0,0,1,1,0,2,1,2,1,0,1,1,0,1,2,0,1,0,1,2,0,0,0,0,2,2,1,2,2,0,2,0,1,0,2,0,0,2,2,1,0,0,1,1,2,1,0,2,0,0,1,2,2,1,1,2,1,2,2,1,0,1,1,0,0,0,2,1,2,2,0,2,1,1,1,1,2,1,0,0,0,2,2,2,1,2,1,1,2,1,1,2,2,2,0,1,2,0,1,0,2,1,0,0,0,1,1,1,1,0,2,0,0,2,2,2,2,2,1,0,0,2,1,0,2,0,0,0,2,1,1,1,2,1,0,0,2,1,2,1,0,2,0,2,0,2,0,1,0,2,2,0,2,2,0,1,1,0,0,1,2,2,0,1,1,1,2,1,2,1,0,0,2,2,0,1,0,2,1,1,2,2,0,0,0,0,2,1,1,1,0,0,0,0,1,0,1,1,0,0,1,0,2,0,0,1,2,1,1,1,2,2,0,0,0,1,2,1,2,1,1,1,2,2,0,2,0,1,2,0,2,1,1,2,1,1,0,0,1,0,1,2,0,2,2,1,2,1,1,2,2,1,2,0,1,1,0,1,0,1,1,2,1,0,2,0,0,1,0,1,1,0,0,0,0,0,1,0,1,0,0,1,2,0,0,2,2,0,2,0,1,1,1,1,2,0,1,0,0,1,0,0,0,1,2,2,2,0,1,2,1,0,0,1,2,2,2,1,2,2,2,1,2,2,1,1,0,1,2,0,0,2,2,0,0,0,2,2,2,0,1,2,0,2,0,2,2,1,2,2,0,1,0,2,2,2,1,0,0,0,1,0,0,2,1,1,0,0,0,2,1,1,0,1,2,1,1,2,0,0,1,1,1,0,0,2,1,1,2,2,0,2,0,0,1,2,0,0,0,0,2,0,0,1,2,0,0,0,0,0,0,1,1,1,2,1,1,2,0,0,2,2,1,1,2,0,1,0,1,0,1,2,2,0,1,2,0,1,0,0,2,0,0,1,0,2,2,2,0,0,1,1,2,0,0,0,0,0,2,2,0,2,1,1,2,2,0,0,1,2,0,2,1,1,2,1,2,0,0,1,2,1,0,1,2,0,0,1,0,0,1,0,2,2,0,0,2,0,2,0,0,1,1,0,0,0,2,2,0,0,0,2,2,0,1,1,2,1,2,1,0,0,0,1,0,1,0,0,2,0,1,1,2,1,2,1,2,0,1,0,2,0,2,0,1,1,1,0,0,1,0,1,1,2,1,1,0,2,1,0,2,0,0,0,0,2,0,1,2,0,2,0,2,0,1,1,0,2,2,2,0,2,0,2,1,0,0,0,1,2,2,2,1,1,2,1,2,0,0,2,0,0,2,0,0,0,1,2,1,2,2,2,1,2,1,1,0,1,2,2,1,1,1,2,1,0,1,2,0,0,1,1,0,2,2,1,0,0,1,2,1,2,1,2,2,2,1,2,1,1,0,1,2,2,0,1,1,2,2,1,0,0,1,1,0,0,1,2,0,2,2,0,0,1,1,2,1,2,2,2,0,1,0,2,0,0,1,1,2,2,2,0,0,1,0,2,1,2,1,2,2,1,2,0,0,0,2,0,0,2,1,0,2,0,0,1,1,0,2,1,2,2,0,0,0,2,2,0,2,1,2,2,1,1,2,1,2,2,1,2,1,0,1,2,0,2,0,2,2,0,1,1,2,2,2,1,2,1,0,1,2,0,1,2,1,0,0,0,2,0,0,1,0,0,1,2,0,2,1,1,2,0,2,1,0,1,2,0,1,2,1,2,0,2,2,0,2,0,1,0,0,1,1,0,2,1,0,1,1,1,1,2,0,0,1,1,1,0,1,0,1,2,1,1,1,0,2,1,2,0,1,1,2,2,1,0,2,1,2,0,0,0,1,1,2,1,1,0,0,0,2,0,1,1,1,2,0,1,1,0,1,0,1,2,2,0,1,2,2,2,2,0,0,0,2,0,2,0,0,1,2,0,2,1,1,0,1,0,1,0,2,2,2,2,1,0,1,2,2,2,1,0,2,0,0,2,1,2,2,1,2,0,0,1,1,0,1,0,0,0,1,0,1,2,0,0,2,0,1,2,0,0,1,1,1,1,0,2,1,2,1,1,0,2,1,2,0,2,0,2,2,2,1,1,2,0,2,0,1,1,1,0,0,2,0,2,0,0,0,1,0,1,0,0,1,0,0,1,1,2,1,2,0,2,1,2,2,1,2,1,0,2,0,0,2,1,2,1,2,2,1,2,0,0,2,2,1,2,2,1,0,2,1,0,2,1,2,0,2,0,1,1,2,1,2,0,0,1,2,0,0,0,0,2,0,2,2,0,2,1,2,0,1,0,2,0,2,1,0,0,0,1,0,1,0,0,1,2,2,1,2,1,0,0,2,1,0,0,0,2,1,0,0,2,2,2,1,2,1,2,1,2,0,1,2,2,1,0,2,1,1,0,2,2,2,2,0,2,1,2,1,1,2,0,0,1,1,1,1,1,2,1,2,0,2,2,0,0,1,0,2,1,2,0,0,1,2,0,0,2,2,2,2,0,2,2,1,0,0,2,1,2,1,2,0,0,1,1,0,0,1,2,1,2,2,0,0,0,2,1,0,1,1,2,0,0,2,1,2,1,1,0,1,2,1,2,2,0,1,1,2,0,2,2,1,1,1,1,2,1,1,0,1,1,2,0,1,2,1,1,2,0,1,0,1,2,2,1,2,2,0,1,1,1,1,0,2,1,0,2,2,1,2,0,1,1,1,1,0,2,1,0,0,2,2,0,1,1,2,0,1,0,0,1,1,0,1,2,0,0,1,1,2,1,2,1,1,1,2,2,2,1,0,0,1,2,2,2,2,1,1,2,0,1,1,2,1,1,0,0,0,2,1,1,0,1,0,1,0,2,2,1,2,1,2,1,2,1,2,0,1,1,0,2,2,1,2,1,0,0,2,1,2,0,1,1,1,2,2,2,2,1,1,2,0,1,0,2,1,0,2,1,0,1,0,1,0,2,2,1,2,0,2,0,2,0,0,1,0,2,1,0,0,1,2,0,1,0,0,0,1,1,0,0,1,0,2,2,1,2,2,2,1,0,2,2,2,1,1,1,1,1,0,0,2,2,2,1,1,2,2,1,0,0,0,2,1,0,0,0,1,2,0,1,2,0,0,1,2,1,2,0,2,0,1,0,2,1,2,2,1,1,0,0,1,2,0,2,0,1,2,2,0,2,2,1,2,0,1,1,1,1,1,2,1,1,0,0,2,0,1,0,0,2,1,1,2,0,1,2,2,0,0,0,1,2,1,2,0,1,2,1,0,0,2,0,2,2,2,2,0,2,0,1,2,2,1,2,0,1,1,0,2,0,1,2,2,2,0,2,1,2,2,0,2,1,1,0,1,1,2,0,1,0,2,2,1,1,2,1,2,1,2,2,1,2,0,1,0,0,0,2,2,2,1,2,2,0,2,1,2,1,1,0,1,0,1,2,0,0,1,2,2,1,1,2,0,0,2,1,2,1,1,1,2,2,1,0,1,2,1,2,0,2,2,1,0,2,1,0,0,2,2,0,2,2,2,0,2,2,0,2,0,2,1,0,2,2,2,2,0,0,0,1,1,0,2,0,1,0,2,2,0,2,1,0,0,1,1,2,1,2,0,1,2,1,1,0,0,2,2,1,0,1,0,2,1,1,2,0,1,1,2,1,0,2,1,0,2,2,0,1,1,1,1,2,2,2,0,0,0,2,2,2,0,2,1,1,1,2,1,2,0,2,0,1,2,0,1,1,2,0,1,2,0,1,1,0,2,1,1,2,0,0,0,1,0,1,2,0,2,2,0,2,1,0,1,1,2,2,2,1,1,0,1,2,0,2,2,2,1,0,1,0,0,2,1,1,0,2,1,0,1,2,1,2,1,2,0,2,1,2,0,1,1,1,2,2,1,1,2,1,1,2,0,1,1,0,1,0,2,0,1,2,0,2,1,2,1,1,0,1,0,0,1,1,1,0,0,1,2,0,2,0,0,1,0,1,1,0,0,1,2,2,0,0,1,2,1,0,1,2,0,0,2,1,0,1,1,1,1,2,0,1,2,0,1,1,2,0,1,0,0,1,2,0,2,0,2,0,0,0,2,0,1,2,1,0,2,1,0,1,0,0,2,2,0,0,0,2,1,0,1,0,0,1,1,2,0,0,2,0,2,0,2,2,2,2,0,2,1,0,2,2,2,0,0,2,1,2,0,0,0,1,1,0,2,0,2,0,1,2,1,0,2,2,0,1,1,2,1,1,2,2,1,2,2,2,2,1,1,0,2,1,1,1,0,0,2,2,2,1,2,2,0,2,0,0,0,1,2,0,0,1,2,0,2,0,1],"eplen":[23,50,65,55,77,75,66,65,55],"epavg":[131.5,60.3,31.3,54.5,20.1,20.5,30.9,31.3,54.8],"nRaw":20000,"nClean":18000,"dropped":2000,"segNames":["Light viewers","Medium viewers","Heavy viewers"],"segCuts":[19187,23176]}</script>
 <script>
-const D = {"shows": ["Big Bang Theory", "Dahmer", "Dark", "Dexter", "It's Okay To Not Be Okay", "Queen Of Tears", "Stranger Things", "Umbrella Academy", "You"], "corr": [[1.0, -0.009482, -0.03397, -0.000132, -0.033736, -0.040397, -0.037823, -0.033373, -0.005369], [-0.009482, 1.0, -0.011686, 0.821099, -0.003132, 0.00792, -0.001239, -0.008429, 0.949817], [-0.03397, -0.011686, 1.0, 0.001058, 0.000975, 0.004661, 0.83672, 0.959428, -0.007002], [-0.000132, 0.821099, 0.001058, 1.0, 0.001616, 0.015922, 0.016999, 0.004217, 0.9216], [-0.033736, -0.003132, 0.000975, 0.001616, 1.0, 0.865645, -0.005194, 0.001407, -0.006949], [-0.040397, 0.00792, 0.004661, 0.015922, 0.865645, 1.0, -0.015124, 0.005408, 0.005461], [-0.037823, -0.001239, 0.83672, 0.016999, -0.005194, -0.015124, 1.0, 0.8469, 0.004655], [-0.033373, -0.008429, 0.959428, 0.004217, 0.001407, 0.005408, 0.8469, 1.0, -0.003938], [-0.005369, 0.949817, -0.007002, 0.9216, -0.006949, 0.005461, 0.004655, -0.003938, 1.0]], "desc": [{"show": "Big Bang Theory", "avg": 3024.73, "median": 3033.23, "min": 603.79, "max": 5477.36, "sd": 798.61, "total": 6049453.78, "viewers": 2000, "avgEp": 131.51, "epLen": 23}, {"show": "Dahmer", "avg": 3015.85, "median": 3013.44, "min": 47.21, "max": 6033.87, "sd": 991.95, "total": 6031692.07, "viewers": 2000, "avgEp": 60.32, "epLen": 50}, {"show": "You", "avg": 3015.59, "median": 3001.44, "min": 47.38, "max": 6225.17, "sd": 1016.25, "total": 6031189.53, "viewers": 2000, "avgEp": 54.83, "epLen": 55}, {"show": "Dexter", "avg": 2999.87, "median": 3033.11, "min": 19.92, "max": 6425.76, "sd": 1011.88, "total": 5999738.1, "viewers": 2000, "avgEp": 54.54, "epLen": 55}, {"show": "Stranger Things", "avg": 2037.09, "median": 2002.93, "min": 5.04, "max": 5727.24, "sd": 989.01, "total": 4074173.35, "viewers": 2000, "avgEp": 30.86, "epLen": 66}, {"show": "Dark", "avg": 2036.83, "median": 2037.53, "min": 0.03, "max": 5384.52, "sd": 980.34, "total": 4073664.45, "viewers": 2000, "avgEp": 31.34, "epLen": 65}, {"show": "Umbrella Academy", "avg": 2035.32, "median": 2024.99, "min": 5.03, "max": 5528.32, "sd": 972.11, "total": 4070643.21, "viewers": 2000, "avgEp": 31.31, "epLen": 65}, {"show": "It's Okay To Not Be Okay", "avg": 1549.21, "median": 1487.73, "min": 0.07, "max": 5548.45, "sd": 930.77, "total": 3098417.85, "viewers": 2000, "avgEp": 20.12, "epLen": 77}, {"show": "Queen Of Tears", "avg": 1538.63, "median": 1468.32, "min": 1.42, "max": 4737.18, "sd": 922.82, "total": 3077253.88, "viewers": 2000, "avgEp": 20.52, "epLen": 75}], "nRows": 20000, "nClean": 18000, "nSubs": 2000, "issues": {"blank": 2000, "nonnum": 0, "neg": 0}, "pivotHead": [[1, 3703.45, 2509.75, 2836.8, 2450.03, 115.04, 843.06, 3260.99, 3121.12, 2585.26], [2, 3031.45, 1615.97, 2608.98, 1492.75, 1806.34, 1827.58, 2593.79, 2380.03, 1445.65], [3, 2270.14, 1300.93, 2175.69, 1774.1, 1530.63, 1438.6, 2882.43, 1893.27, 1323.56], [4, 2630.0, 2642.49, 2865.15, 2361.18, 900.71, 918.76, 2804.16, 2743.57, 2412.55], [5, 3274.28, 3433.79, 2074.9, 2246.94, 1751.98, 1959.81, 1419.81, 1913.16, 2611.33], [6, 4454.77, 3799.69, 3268.93, 3190.82, 2292.09, 1890.52, 2012.66, 3165.2, 3641.96], [7, 2612.78, 4154.9, 2356.6, 3329.0, 2341.05, 1909.28, 1788.87, 2263.84, 4147.63], [8, 3643.83, 3309.14, 2035.93, 3311.6, 1348.73, 1614.52, 721.26, 2052.73, 3047.92], [9, 2737.55, 3582.8, 2478.69, 3613.15, 716.56, 1087.49, 2260.7, 2175.03, 3401.21], [10, 3088.38, 2828.02, 3020.03, 2466.05, 937.14, 828.67, 4113.59, 3237.46, 2607.17], [11, 4212.32, 3064.56, 3580.2, 4167.05, 2211.39, 1941.84, 3679.89, 3454.29, 3537.19], [12, 3611.43, 3884.48, 2611.49, 4332.55, 1266.58, 676.36, 3348.5, 2628.99, 3883.7]], "rawHead": [[1, "Stranger Things", 49.4089, 66.0, 3260.9867], [1, "Dark", 43.6431, 65.0, 2836.7985], [1, "Queen Of Tears", 11.2408, 75.0, 843.0569], [1, "You", 47.0047, 55.0, 2585.2601], [1, "Dexter", 44.5459, 55.0, 2450.0253], [1, "Umbrella Academy", 48.0173, 65.0, 3121.1239], [1, "It's Okay To Not Be Okay", 1.494, 77.0, 115.0392], [1, "Big Bang Theory", 161.0194, 23.0, 3703.4458], [1, "Dahmer", 50.1951, 50.0, 2509.7527], [2, "Stranger Things", 39.2998, 66.0, 2593.7882], [2, "Dark", 40.1382, 65.0, 2608.9825], [2, "Queen Of Tears", 24.3678, 75.0, 1827.584]], "scatterA": {"x": "Dark", "y": "Stranger Things", "r": 0.83672, "pts": [[2836.8, 3261.0], [2175.7, 2882.4], [2074.9, 1419.8], [2356.6, 1788.9], [2478.7, 2260.7], [3580.2, 3679.9], [959.6, 1817.2], [193.3, 78.4], [3338.9, 3574.8], [1956.6, 1137.8], [2035.6, 1689.3], [3136.3, 2385.8], [2139.7, 1674.4], [3762.1, 2770.0], [1987.9, 2207.5], [1269.7, 1270.5], [3160.7, 3035.0], [3044.0, 2923.1], [1489.2, 1772.9], [2123.6, 2572.6], [2033.6, 2048.0], [1025.2, 358.9], [77.8, 241.1], [2067.8, 1608.9], [1393.2, 1529.9], [111.6, 552.9], [1996.7, 2481.7], [3151.0, 3732.5], [2116.9, 1985.9], [1601.1, 1780.2], [766.6, 1201.3], [1807.8, 1187.7], [2458.7, 2262.4], [2148.0, 2404.9], [3368.9, 2505.6], [1000.4, 1034.5], [1729.5, 2421.4], [2505.3, 1401.9], [1116.2, 1458.6], [2308.4, 1850.5], [2220.4, 2551.5], [1362.4, 1255.0], [563.7, 569.9], [3110.3, 3064.5], [2620.1, 2509.2], [2477.4, 2067.6], [913.5, 1210.7], [1212.0, 769.1], [498.7, 763.0], [3156.3, 2857.1], [2080.6, 2736.0], [2938.1, 2443.5], [3470.8, 2941.4], [1219.2, 1154.6], [2144.8, 2967.6], [404.4, 1262.1], [1264.5, 1518.7], [2113.5, 2194.0], [3387.8, 3369.5], [4273.4, 4034.7], [1263.9, 751.2], [1699.4, 3059.9], [1124.1, 493.6], [1415.5, 1142.5], [1804.3, 1130.0], [3669.0, 3800.3], [1769.3, 2363.7], [2521.3, 2161.0], [2520.3, 2344.6], [1341.8, 1899.0], [3133.6, 3366.3], [3257.5, 2222.6], [3211.6, 3867.7], [1344.0, 1325.1], [964.8, 1590.5], [2293.8, 1894.8], [3238.3, 2735.1], [2108.2, 1931.4], [1365.8, 1746.7], [4037.5, 3487.8], [827.1, 2084.7], [2016.4, 2726.0], [1049.4, 859.8], [2167.6, 2199.9], [1090.7, 1109.3], [549.3, 229.3], [7.1, 353.2], [2662.9, 2057.7], [1912.0, 2276.9], [2688.0, 2334.8], [989.7, 2698.9], [3438.9, 3771.1], [1436.0, 1899.3], [1551.6, 850.4], [2356.1, 1773.1], [2180.2, 2617.5], [2440.1, 2934.6], [2196.4, 2822.4], [2876.3, 2720.8], [3967.2, 3229.0], [3391.4, 3186.1], [2714.0, 2681.1], [3706.4, 2349.8], [3029.6, 3406.8], [2308.2, 3356.5], [3556.2, 3292.5], [1329.7, 2117.6], [2571.1, 3031.9], [996.5, 898.1], [2692.1, 1839.9], [1191.8, 1458.2], [3232.9, 3248.5], [1793.3, 1617.1], [2489.7, 2806.0], [1939.7, 1929.6], [1376.5, 1812.9], [1083.1, 654.3], [3865.5, 4574.8], [671.6, 750.0], [4140.3, 3668.7], [1694.7, 1078.2], [2600.0, 2826.8], [1815.3, 2113.9], [1282.7, 372.8], [2671.3, 3261.6], [951.3, 1443.4], [2039.5, 1512.3], [1726.9, 1103.8], [273.0, 690.4], [3340.0, 2729.1], [840.3, 877.3], [688.3, 1494.2], [993.8, 1389.9], [2371.8, 1809.8], [2691.4, 2845.0], [1188.7, 2103.7], [3636.2, 4368.2], [3051.2, 2611.2], [2148.4, 2322.2], [1534.3, 2073.7], [2772.5, 2810.1], [2348.0, 1757.8], [1651.7, 2596.9], [2654.1, 2244.3], [2353.5, 1643.6], [1539.3, 1368.0], [1286.3, 1751.0], [2699.0, 2749.0], [2737.7, 2631.7], [2489.0, 2850.2], [1147.4, 1100.6], [2947.4, 3209.0], [3031.3, 2224.2], [326.2, 381.8], [3735.0, 4373.6], [2953.6, 2420.7], [448.0, 816.4], [665.7, 428.4], [2304.2, 2078.9], [2658.7, 3567.6], [1025.5, 878.5], [2540.3, 2566.7], [542.0, 195.4], [61.6, 1246.4], [2923.6, 3360.9], [1737.0, 1108.8], [1153.3, 1475.0], [1358.9, 1423.5], [998.0, 223.0], [2370.9, 2140.7], [371.6, 677.8], [1329.1, 2112.5], [1552.0, 1900.4], [4184.4, 4418.9], [1122.4, 1458.2], [1277.4, 960.2], [2527.6, 2274.6], [2746.4, 2621.7], [218.4, 1267.4], [1631.2, 867.7], [1789.5, 1223.9], [1523.1, 2556.6], [3735.1, 2932.6], [2562.3, 3327.1], [1044.9, 1538.2], [3164.5, 2861.7], [110.6, 493.6], [2641.9, 2470.1], [2044.5, 1343.6], [2385.5, 2172.1], [5211.8, 4857.6], [1123.0, 2422.5], [2922.2, 2574.5], [2794.1, 2944.3], [2962.7, 2746.2], [2401.5, 2539.1], [608.9, 1241.6], [1123.2, 1658.4], [1921.6, 3000.2], [1390.2, 1198.4], [1988.5, 1851.6], [1827.4, 1188.8], [3182.4, 3350.7], [2914.5, 3677.2], [1795.9, 2417.8], [3357.8, 2357.0], [2172.8, 2132.6], [2807.9, 3033.6], [3638.9, 4322.8], [1626.4, 668.6], [125.7, 150.0], [1189.5, 1158.4], [1276.0, 1248.2], [2116.2, 1792.3], [736.6, 1226.3], [4668.7, 4981.5], [2507.1, 3148.1], [2570.2, 2305.4], [2779.2, 3328.6], [3245.0, 2476.6], [1297.2, 1447.8], [739.5, 745.0], [12.8, 712.7], [2124.3, 1539.7], [2136.7, 2784.8], [2844.7, 2803.8], [1494.8, 1790.9], [1009.4, 1221.2], [3186.1, 3383.0], [1972.2, 848.4], [1123.8, 986.3], [2426.5, 2183.2], [3214.4, 3344.1], [1795.3, 1144.7], [3008.4, 2112.2], [963.1, 982.8], [1067.3, 1602.3], [3046.7, 2671.3], [1519.8, 2377.1], [2386.7, 2308.4], [813.5, 657.7], [1325.8, 1460.6], [3078.3, 2612.9], [2266.4, 3060.2], [258.3, 343.3], [850.1, 1219.7], [4485.8, 4033.8], [2439.1, 2631.8], [1869.7, 1471.1], [2866.5, 3165.2], [447.7, 352.8], [1545.7, 2085.0], [1540.0, 1958.7], [4574.8, 3979.6], [2064.7, 2361.9], [899.9, 601.9], [1924.9, 3167.1], [1623.0, 776.3], [1638.9, 702.8], [1398.4, 1115.8], [3416.0, 3844.2], [2283.9, 2786.4], [2796.6, 2052.9], [2445.8, 3050.2], [1059.3, 1674.7], [2832.0, 2563.0], [3472.4, 3854.3], [1412.5, 1858.1], [2388.7, 2369.0], [357.9, 990.9], [2576.0, 2925.5], [797.7, 784.4], [1447.2, 856.9], [21.4, 1312.9], [719.2, 1307.7], [846.1, 1110.9], [229.9, 1364.4], [2900.9, 2392.1], [2099.8, 2023.7], [2648.4, 3049.5], [1302.5, 1794.7], [2554.8, 2267.0], [603.1, 671.1], [1848.1, 1282.4], [2903.1, 2828.8], [1394.8, 2172.5], [2872.0, 2235.4], [2067.6, 1852.1], [1881.3, 1602.4], [1949.5, 2515.0], [1196.6, 1386.0], [774.6, 576.1], [1084.9, 1508.9], [3309.8, 3791.1], [925.1, 660.3], [1054.8, 1241.8], [767.7, 1399.5], [2405.2, 954.0], [2281.2, 1645.1], [1964.5, 1489.0], [2575.0, 3018.4], [2129.6, 986.2], [1791.4, 2000.8], [2562.7, 2336.9], [1271.7, 679.6], [2415.1, 1914.2], [1263.0, 1371.0], [1506.3, 1540.7], [2848.9, 2737.9], [2648.4, 3235.0], [166.6, 23.2], [1153.9, 896.8], [565.0, 323.6], [2458.1, 2388.8], [2112.0, 1703.1], [1869.7, 1452.1], [498.3, 795.5], [1557.6, 2071.2], [1439.6, 997.7], [2291.2, 2312.2], [768.7, 345.4], [2951.3, 2794.8], [2396.0, 1667.6], [220.0, 697.2], [1579.7, 1965.7], [3521.2, 2962.0], [2453.3, 1255.0], [2818.2, 2456.2], [2824.5, 1976.2], [1845.4, 1802.6], [2800.2, 3048.1], [1764.9, 1924.4], [476.2, 138.6], [772.8, 294.8], [876.6, 602.9], [2344.5, 2111.1], [2868.5, 2965.5], [3153.3, 4013.1], [3539.2, 3481.3], [2471.7, 1573.3], [1963.8, 2245.7], [2302.6, 2834.5], [2247.2, 2568.9], [1652.5, 2190.2], [3035.0, 2796.0], [1118.0, 868.2], [2340.8, 1666.8], [2457.5, 2200.9], [1329.9, 1772.1], [2607.6, 1011.0], [4138.8, 4475.9], [2342.0, 1745.6], [3351.1, 4091.9], [2385.3, 2220.0], [2610.0, 1995.0], [2413.0, 2043.8], [2772.7, 2616.6], [3470.7, 3523.7], [1704.2, 1960.2], [1052.4, 1278.3], [2409.9, 1818.4], [331.5, 106.0], [1534.2, 2037.1], [769.1, 1365.3], [1778.5, 2435.0], [1326.5, 1585.6], [2063.7, 660.3], [2322.0, 2791.9], [3198.2, 2883.6], [2742.5, 2394.6], [3862.0, 3191.8], [2792.3, 1607.8], [4027.6, 4122.1], [278.3, 846.2], [2438.4, 3147.2], [1942.8, 2752.7], [906.6, 869.6], [1862.2, 2193.2], [2673.6, 2402.0], [3503.1, 2925.9], [2674.4, 1801.2], [1575.1, 2226.3], [1745.0, 460.4], [2574.4, 1808.9], [1142.5, 926.2], [3412.2, 1862.8], [2224.7, 1864.3], [554.9, 279.8], [1892.1, 1991.3], [934.6, 891.8], [2268.6, 1941.2], [2505.5, 2239.7], [2028.6, 1335.0], [2529.5, 2745.2], [1290.0, 1058.4], [2240.1, 2693.8], [3267.1, 3613.6], [2157.5, 1463.2], [2395.4, 3006.7], [3108.6, 2460.9], [2074.9, 1363.1], [399.5, 703.5], [2997.7, 2887.1], [2480.1, 2699.5], [1511.8, 1445.6], [2643.1, 2738.5], [1879.5, 1782.2], [2012.8, 2697.9], [2584.6, 2600.7], [3346.3, 2766.8], [2392.3, 3487.2], [1505.8, 920.7], [2596.3, 2832.4], [448.7, 424.2], [268.1, 120.5], [571.9, 1171.7], [1457.6, 1050.5], [82.1, 320.9], [2694.6, 2343.8], [2335.6, 2312.6], [2196.4, 2141.1], [2493.9, 2231.4], [1964.4, 1058.7], [1752.5, 1453.9], [2309.4, 1244.4], [3228.0, 3511.2], [2728.5, 1547.7], [810.8, 1044.3], [1147.3, 2205.3], [2218.5, 1987.7], [1492.6, 2051.9], [307.4, 1036.3], [128.6, 146.4], [3050.6, 2867.6], [1418.2, 1006.2], [2584.7, 2217.9], [3687.2, 3135.7], [2637.9, 1838.7], [1060.4, 1637.2], [3041.5, 3468.7], [441.7, 780.6], [4136.4, 4134.2], [1534.6, 1530.7], [2275.3, 1905.5], [2340.0, 1984.1], [1191.3, 385.2], [1939.3, 1647.6], [3916.1, 3275.9], [115.8, 51.8], [2525.4, 1718.6], [142.9, 720.7], [2072.0, 1669.8], [3228.2, 3214.6], [1299.6, 1801.1], [2500.5, 2286.5], [2455.1, 2469.8], [1958.1, 1903.5], [2319.7, 1569.9], [3965.7, 3939.6], [2805.1, 2147.2], [650.7, 1557.5], [1053.9, 986.0], [3086.5, 2505.0], [740.9, 979.3], [3300.0, 3044.0], [3987.5, 4124.6], [2840.1, 2161.2], [1689.9, 1309.3], [1688.2, 1268.4], [1670.8, 1682.9], [1915.2, 1159.3], [3185.7, 2889.0], [2746.1, 2115.4], [630.6, 457.2], [1391.6, 1861.5], [188.2, 521.6], [1601.1, 1747.8], [2171.9, 3001.6], [1849.3, 2461.4], [1449.4, 1687.5], [4164.6, 4150.4], [1637.2, 1730.6], [2555.8, 3255.3], [3128.4, 2758.2], [2371.7, 2677.7], [2672.8, 3116.0], [46.2, 530.6], [2880.9, 3051.2], [2950.1, 2887.3], [1244.6, 1427.2], [944.8, 11.7], [2273.9, 2120.5], [2772.7, 3071.0], [1080.7, 1224.0], [1014.2, 1937.2], [2563.9, 1822.8], [1778.1, 1736.6], [2218.2, 1790.4], [655.3, 751.6], [2198.8, 1988.7], [1523.3, 900.3], [2421.0, 1834.9], [4450.6, 4293.3], [2338.8, 1940.6], [2022.6, 1700.8], [2034.8, 2101.4], [2324.6, 1485.2], [1227.3, 2285.2], [2412.8, 1857.2], [3543.9, 3874.9], [2161.6, 2084.1], [3184.6, 2636.8], [4114.4, 2960.8], [2709.6, 3603.6], [867.7, 878.3], [1097.5, 1469.0], [3015.4, 3623.8], [1405.6, 810.0], [842.3, 431.6], [2377.8, 1666.4], [3962.8, 4563.2], [1372.2, 1767.5], [1603.1, 1663.2], [2741.9, 2280.1], [2066.9, 3017.2], [1539.7, 1308.5], [1995.1, 1509.3], [1674.9, 993.1], [1646.6, 1614.6], [1028.5, 1115.7], [1990.7, 2228.3], [3723.3, 3449.7], [1323.8, 1291.7], [4564.8, 4494.8], [2919.6, 3670.3], [3407.9, 3695.7], [751.8, 772.3], [596.4, 1670.9], [3716.5, 3639.9], [685.5, 1383.5], [1225.3, 1295.1], [1626.7, 2011.3], [2209.7, 2884.3], [1005.8, 500.5], [2998.7, 2623.2], [643.9, 135.8], [2423.0, 2248.2], [2978.0, 2532.1], [2053.0, 1653.1], [189.6, 536.6], [1821.0, 1303.5], [1291.9, 1092.6], [917.2, 1026.0], [2185.6, 2828.0], [3363.4, 3210.2], [490.8, 794.4], [611.4, 780.8], [727.9, 537.2], [1390.5, 1555.0], [4283.4, 3842.8], [872.9, 159.7], [2696.7, 1822.4], [2523.6, 2424.2], [2417.8, 2315.4], [2661.7, 2535.5], [2367.2, 1560.2], [1218.6, 1575.6], [3591.8, 3558.1], [2625.5, 1870.3], [3265.0, 3476.3], [1808.1, 1627.9], [2564.6, 3120.7], [2369.0, 2503.9], [933.6, 1255.9], [171.5, 1290.2], [2159.6, 2006.6], [1393.9, 1259.8], [2215.7, 1999.1], [2705.7, 2675.0], [4112.6, 3971.9], [1156.7, 1604.9], [2313.1, 1713.9], [2365.9, 2254.6], [2207.8, 1332.2], [369.1, 82.4], [4272.3, 4604.5], [395.4, 155.3], [1347.6, 316.7], [1912.7, 1896.8], [1005.1, 1400.5], [1681.9, 1907.3], [1398.7, 1099.6], [1357.8, 1561.6], [2453.0, 2655.2], [1425.7, 1518.1], [2194.1, 2550.9], [3557.0, 3219.8], [3699.7, 3337.6], [4272.5, 3634.3], [1681.6, 2061.5], [4399.6, 3588.0], [4609.6, 4443.6], [2076.0, 3142.5], [930.6, 1280.7], [3093.2, 3391.3], [9.3, 165.8], [2267.5, 1523.5], [1724.6, 1729.0], [1888.5, 1635.8], [1917.0, 1138.5], [2055.1, 1944.0], [1911.9, 2238.7], [2788.7, 3542.6], [1667.6, 1735.5], [2682.7, 2354.1], [1821.7, 1674.4], [2159.7, 1669.1], [1504.9, 1454.2], [2964.5, 3636.7], [1581.1, 1602.1], [2374.2, 2216.8], [1678.9, 2494.3], [721.2, 1278.1], [1064.9, 987.2], [1547.5, 1229.5], [2349.6, 2392.5], [1138.0, 1458.4], [1888.0, 1698.2], [445.3, 1963.4], [2643.6, 1707.6], [2490.8, 2030.1], [1907.2, 1201.2], [1565.7, 2175.4], [2021.5, 2543.0], [978.1, 1710.9], [2470.9, 2782.2], [1738.7, 1885.8], [2675.1, 2917.0], [1229.8, 1743.7], [230.3, 393.9], [3248.9, 2543.1], [1671.1, 1653.4], [1134.2, 1589.5], [1923.9, 740.2], [1926.4, 1905.2], [1671.0, 2389.2], [250.3, 720.3], [3324.9, 2958.3], [1716.2, 2176.1], [1927.1, 2406.8], [1005.1, 987.6], [1958.1, 570.4], [2936.4, 2384.1], [2057.6, 2132.9], [1742.8, 2140.3], [2620.2, 2968.9], [1681.3, 1389.4], [345.7, 550.3], [2553.8, 1717.9], [1936.2, 1512.7], [2991.2, 3286.8], [2480.3, 2457.5], [1498.8, 1003.1], [2597.2, 3579.7], [3036.5, 3251.7], [732.2, 599.1], [3881.8, 4121.2], [2766.9, 2524.3], [3103.8, 2498.5], [1058.8, 1211.1], [797.0, 350.1], [1478.5, 1852.8], [1136.0, 1713.8], [1783.6, 703.4], [2890.4, 2731.0], [3749.4, 3415.3], [1970.5, 2821.3], [1280.6, 519.0], [1663.9, 1924.2], [958.9, 1253.3], [3.4, 754.2], [2792.2, 3409.1], [4193.9, 4645.7], [2475.1, 2593.7], [2811.3, 3001.6], [2930.7, 1967.6], [1544.0, 1423.3], [982.9, 1930.5], [1669.9, 2264.8], [2770.9, 3145.4], [2228.6, 1889.1], [2870.6, 3132.7], [2194.0, 2937.7], [1529.8, 1081.9], [4712.4, 4135.6], [535.2, 24.7], [2386.1, 1882.9], [1311.1, 1084.7], [2050.0, 1008.2], [2468.1, 2108.1], [1823.4, 1653.6], [246.7, 1134.9], [1063.8, 1404.5], [1123.1, 712.9], [840.0, 472.3], [725.0, 1538.9], [627.8, 975.1], [2785.1, 2269.2], [1146.7, 1249.6], [1796.2, 2449.6], [2208.4, 1641.3], [2371.4, 2441.8], [153.9, 180.5], [2134.8, 1442.3], [1927.1, 1772.2], [2591.8, 3430.1], [4733.9, 3630.1], [17.4, 593.3], [2296.6, 1885.5], [2974.6, 2284.6], [2009.1, 1554.4], [2028.8, 1693.3], [155.6, 289.8], [2242.1, 2898.1], [1396.9, 1675.0], [1561.3, 2421.4], [1094.5, 2255.0], [1400.4, 2216.5], [3552.9, 2630.1], [2099.8, 1663.7], [236.5, 539.6], [3369.8, 3306.9], [972.3, 1119.9], [1908.8, 2931.7], [2620.7, 2014.1], [1882.4, 1925.7], [920.4, 741.1], [1852.7, 1986.1], [633.3, 1420.3], [1579.7, 1691.1], [2197.2, 2492.7], [1005.5, 1658.7], [1192.7, 709.6], [2554.6, 1783.1], [2016.0, 2501.7], [1438.8, 1474.9], [3443.2, 2519.8], [3493.6, 3027.7], [2676.3, 3192.8], [2433.0, 2742.5], [855.3, 84.6], [2099.8, 3051.7], [1853.4, 2602.5], [3853.9, 2682.1], [1684.0, 1814.7], [343.3, 752.8], [463.7, 1391.2], [1374.5, 2954.5], [2414.0, 2097.8], [774.6, 1611.1], [2545.2, 2186.6], [801.4, 557.4], [3098.5, 2969.1], [1421.8, 1728.4], [2698.2, 3250.2], [2191.8, 2394.4], [1717.8, 1215.3], [2637.8, 3229.1], [743.4, 1185.5], [1929.3, 1726.2], [2555.9, 2232.7], [731.4, 1054.2], [2082.1, 2866.2], [2480.5, 2440.9], [3079.4, 2664.5], [2203.5, 2116.6], [533.3, 990.3], [851.5, 1742.4], [1932.2, 2162.0], [3494.7, 3568.8], [2802.8, 2739.8], [3712.9, 3628.5], [1038.5, 1041.0], [1029.2, 2267.6], [1301.2, 1708.8], [1052.0, 127.8], [2300.2, 1694.7], [2076.0, 1953.9], [3806.8, 4527.1], [2566.3, 4100.8], [966.9, 1037.0], [1740.6, 2498.8], [3898.7, 4499.7], [1564.3, 1953.9], [242.1, 191.5], [1210.2, 279.6], [3526.4, 3579.1], [3089.1, 2407.5], [3574.7, 3786.7], [855.7, 1293.8], [2687.5, 2344.8], [2469.0, 2536.1], [2073.9, 2012.3], [2183.7, 1378.2], [2982.0, 3137.7], [578.4, 555.2], [2467.7, 2887.4], [2864.0, 2555.4], [2038.1, 2486.3], [2693.0, 3039.7], [1895.9, 2624.8], [1581.5, 2118.4], [1639.0, 1146.1], [3020.7, 3563.4], [1242.7, 795.3], [2003.1, 1750.7], [3248.6, 3652.7], [3563.8, 3211.2], [2388.7, 2758.5], [2770.4, 2751.9], [399.7, 991.1], [2512.7, 2894.4], [3187.6, 3050.7], [4393.1, 4075.3], [1242.6, 701.3], [2981.0, 2278.5], [4185.1, 3927.3], [2821.9, 2593.0], [1546.5, 1261.5], [3092.0, 2816.9], [4278.5, 4071.1], [433.0, 517.4], [2319.0, 2699.0], [1014.8, 1358.6], [841.2, 1063.5], [1756.5, 1853.5], [1847.2, 2425.3], [1445.8, 954.8], [1606.9, 1566.9], [2655.9, 3175.1], [2251.2, 2881.5], [449.2, 856.3], [1737.5, 1644.5], [2544.6, 2229.1], [661.6, 932.6], [2224.4, 3230.5], [2179.2, 2891.8], [1577.6, 1661.7], [5232.5, 4166.1], [2515.0, 2324.1], [1322.0, 2008.2], [1364.7, 1709.6], [1880.9, 2107.6], [1173.8, 632.0], [994.3, 678.4], [3656.9, 3327.7], [2639.8, 3319.6], [3702.7, 2753.7], [3401.5, 2858.9], [3161.2, 2560.9], [262.4, 1105.9], [3399.8, 2833.3], [3184.7, 3227.1], [1919.1, 2250.2], [2398.9, 2819.1], [2065.4, 2249.4], [4257.5, 3140.0], [2812.7, 2672.2], [1974.9, 943.8], [1865.9, 1131.4], [2837.5, 2957.4], [398.7, 1076.5], [1772.9, 1872.2], [1835.1, 1799.5], [752.7, 821.5], [613.6, 836.3], [4593.0, 4538.1], [1836.7, 2543.3], [1422.6, 543.3], [1715.6, 1070.7], [182.4, 130.7], [2147.7, 2978.8], [950.4, 225.6], [2239.8, 2443.8], [2830.0, 3122.9], [1806.2, 2501.4], [1183.4, 1007.3], [2222.1, 1287.7], [2738.4, 2911.1], [3237.3, 3683.0], [1914.3, 2257.0], [2706.2, 1775.4], [843.3, 59.2], [2900.1, 2536.8], [2278.4, 1972.5], [2443.8, 3366.3], [2269.9, 1657.2], [3099.3, 3846.7], [1168.7, 1529.0], [2699.9, 3029.1], [1933.7, 2404.3], [2988.4, 2163.8], [1659.6, 1535.2], [2475.7, 1977.3], [2595.1, 3187.5], [2025.0, 2109.9], [2470.1, 1713.4], [2417.3, 2342.6], [674.3, 1708.3], [2.6, 483.4], [1429.0, 1289.1], [2304.4, 2260.8], [3037.1, 3139.0], [3018.8, 3636.7], [2243.5, 2545.3], [2856.5, 2694.2], [2306.2, 2682.5], [1915.0, 1003.4], [1183.2, 517.0], [2280.6, 1478.6], [11.0, 1821.8], [1873.2, 1590.6], [2455.9, 3163.8], [1556.6, 915.2], [2090.3, 1357.4], [926.5, 872.9], [1231.6, 2338.3], [3598.2, 2528.2], [1457.3, 1721.0], [2561.9, 2427.9], [2152.4, 1951.3], [2372.2, 2905.0], [27.6, 644.2], [2295.7, 2581.6], [2218.6, 2893.2], [1903.4, 440.1], [2537.5, 1999.1], [2282.4, 2522.0], [101.1, 983.4], [1075.7, 1023.9], [1845.3, 1679.1], [900.8, 956.3], [1758.4, 1127.9], [1286.8, 1670.4], [1877.8, 2184.7], [3388.1, 3491.8], [1763.6, 2109.8], [278.7, 160.8], [2459.8, 1805.3], [2214.6, 2832.8], [1299.8, 1198.6], [3009.1, 2488.2], [1025.3, 834.5], [3117.5, 2153.9], [549.0, 920.1], [3585.1, 2077.7], [2523.9, 1599.6], [2204.7, 2149.0], [1490.4, 2326.1], [2825.4, 2110.4], [1845.5, 1628.1], [1990.9, 2552.1], [1703.1, 1299.3], [2170.8, 2629.1], [3058.0, 2970.4], [4005.7, 2908.8], [3913.3, 4026.1], [2426.8, 2639.5], [1005.3, 678.9], [1625.3, 1148.6], [2368.8, 3027.2], [251.4, 429.5], [1081.7, 2169.4], [277.6, 218.8], [2052.9, 1979.7], [1742.5, 1516.2], [2367.5, 1845.3], [1673.5, 823.7], [1987.4, 1532.8], [2036.9, 2884.7], [1811.3, 2041.2], [2027.5, 2238.3], [2782.8, 2949.0], [3943.6, 3220.9], [2789.7, 1292.7], [1490.7, 2240.2], [1482.4, 977.3], [1687.6, 2094.1], [2372.3, 2868.5], [2523.5, 2260.6], [1297.4, 800.6], [1055.3, 1983.7], [1721.3, 3456.5], [3010.8, 2389.3], [2822.1, 2752.4], [1342.1, 2275.5], [1589.6, 2325.0], [4488.0, 4464.6], [231.5, 997.4], [1331.7, 2007.9]]}, "scatterB": {"x": "Big Bang Theory", "y": "You", "r": -0.005369, "pts": [[3703.4, 2585.3], [2270.1, 1323.6], [3274.3, 2611.3], [2612.8, 4147.6], [2737.6, 3401.2], [4212.3, 3537.2], [2007.0, 2695.6], [4005.0, 2943.7], [2080.9, 2758.1], [3562.8, 1823.8], [3014.3, 3351.8], [3659.3, 3081.1], [2347.4, 2654.0], [3268.3, 2952.3], [4339.0, 3946.1], [3506.5, 2779.9], [2462.2, 2693.0], [2549.5, 3354.1], [3379.7, 2505.0], [2437.7, 3178.5], [3151.7, 2410.6], [2291.4, 4030.4], [3035.9, 3938.4], [2273.2, 2253.6], [3539.2, 2556.3], [4028.0, 2650.7], [1762.0, 955.9], [3303.3, 1982.7], [3016.0, 3163.9], [2838.2, 2693.0], [2760.8, 2267.9], [4348.1, 2420.9], [3872.8, 2851.0], [3739.2, 3027.2], [1585.4, 4485.3], [2247.2, 2502.5], [1945.3, 3726.5], [3111.6, 2308.7], [3535.3, 3605.0], [2943.6, 566.4], [2831.7, 3865.0], [3312.4, 3721.3], [2346.7, 636.8], [3090.8, 2409.9], [1640.5, 3502.3], [3115.3, 1745.1], [2462.9, 2829.9], [3587.9, 1712.6], [3024.7, 2713.7], [2005.9, 2777.3], [2741.8, 3947.9], [4013.8, 1802.7], [3895.1, 2301.5], [3053.0, 2690.3], [2527.6, 4200.9], [2858.7, 3054.2], [3963.7, 3894.2], [4226.9, 2713.2], [3677.5, 3769.9], [2510.5, 3053.2], [3759.3, 2408.0], [3541.5, 2786.0], [3658.8, 1771.4], [4066.9, 719.7], [4148.1, 3801.5], [3114.9, 3722.9], [2158.0, 4661.9], [2133.1, 2937.1], [2552.3, 2948.6], [3394.2, 2885.2], [2102.5, 830.3], [2281.2, 4078.4], [4074.2, 3432.0], [4416.8, 4765.1], [2536.6, 4334.9], [2958.0, 2906.1], [2607.8, 3076.5], [3966.8, 3682.9], [2459.2, 3520.9], [3121.5, 1424.1], [2718.3, 2963.9], [1748.1, 3899.9], [2617.0, 3142.5], [2980.9, 4046.9], [4351.1, 3599.3], [2121.9, 2699.8], [2471.6, 2543.3], [3407.6, 3551.8], [1834.2, 2850.5], [3463.6, 3547.8], [2997.2, 2265.2], [3778.7, 2472.3], [3292.9, 1856.7], [2848.8, 2654.0], [2994.7, 1551.9], [3389.7, 2961.4], [1913.7, 2551.1], [4462.9, 2303.1], [2833.4, 2203.7], [2556.8, 1940.1], [4120.6, 2379.1], [2357.2, 3603.3], [3062.9, 3062.7], [4129.7, 2409.3], [4330.3, 1291.2], [4144.0, 4629.4], [4032.8, 2008.1], [2093.9, 3285.3], [1872.9, 3437.0], [2357.3, 408.1], [3026.4, 3593.4], [3117.0, 2873.0], [3534.6, 3183.7], [4456.0, 2101.3], [2583.1, 4175.1], [2084.6, 3187.2], [3799.5, 2831.7], [2033.4, 3566.9], [3039.0, 5061.4], [3902.8, 3012.1], [4607.1, 2584.5], [2889.1, 2901.8], [2642.1, 2778.4], [4251.2, 1057.4], [3369.8, 2528.2], [3009.0, 3857.4], [3197.8, 2389.9], [2242.1, 568.2], [2075.6, 3653.7], [3821.6, 2340.3], [4278.1, 2916.6], [2716.6, 2134.9], [3452.9, 2638.4], [3258.1, 3087.0], [2762.7, 3476.3], [2948.2, 3383.9], [2038.8, 2709.1], [3357.9, 642.7], [2867.3, 3266.3], [4216.5, 3219.1], [2010.1, 2885.9], [3680.0, 2540.7], [2966.8, 3775.3], [2454.0, 3558.4], [3221.6, 3666.7], [2450.5, 3035.7], [2913.1, 3511.1], [1842.5, 3539.8], [2862.4, 2467.0], [1719.8, 1563.9], [2863.1, 2646.5], [2279.4, 4422.6], [2610.7, 2679.9], [2464.4, 3575.9], [5182.8, 1782.3], [3145.2, 3311.1], [1402.4, 4033.1], [3139.5, 2578.2], [3319.6, 3007.1], [2240.3, 3084.8], [3743.1, 2329.0], [3030.4, 3610.9], [2723.5, 2121.6], [3665.4, 4665.1], [2775.3, 3232.3], [3746.3, 2833.4], [1696.6, 1095.5], [3558.5, 3050.1], [3201.5, 2126.1], [2823.3, 1163.7], [2881.4, 2491.2], [2642.9, 3033.6], [2354.9, 2514.5], [3001.3, 2945.2], [3005.7, 3222.9], [945.9, 3677.0], [3333.7, 3050.8], [2575.5, 1861.1], [2337.5, 3452.6], [3217.3, 1821.2], [2233.2, 3323.8], [2415.0, 1921.6], [3113.4, 2356.4], [3813.3, 2188.7], [1998.6, 1997.8], [3663.4, 3292.2], [3231.4, 606.7], [2408.7, 2601.1], [4307.7, 3092.6], [1986.1, 3358.7], [2249.5, 3231.2], [2283.2, 4354.2], [2411.1, 3895.4], [3245.3, 1712.6], [3414.2, 2053.9], [2376.4, 2238.5], [4215.2, 4585.6], [3339.7, 2009.2], [1765.1, 2494.2], [3726.7, 4585.8], [2854.4, 2904.6], [3715.0, 3556.7], [3790.8, 3654.4], [1953.4, 3616.0], [3205.3, 3196.7], [4083.1, 3600.1], [4680.8, 1401.2], [3335.5, 3541.9], [1474.2, 2862.0], [1834.3, 2015.3], [3027.8, 2501.9], [1793.9, 3053.4], [3078.5, 4262.2], [2654.6, 2834.4], [2026.0, 3611.6], [3382.3, 2517.7], [2548.0, 2118.2], [1781.2, 3270.2], [3534.9, 1886.2], [2836.9, 2904.8], [653.0, 2915.0], [3282.9, 3800.9], [2669.8, 3179.4], [3427.3, 3404.7], [3025.7, 1780.3], [3609.7, 4310.9], [3123.1, 3352.2], [2849.3, 3063.5], [3812.7, 3457.0], [3006.8, 1442.9], [2807.8, 2603.0], [3394.5, 1636.5], [2352.2, 922.1], [3016.2, 1684.9], [2784.2, 1847.7], [4427.7, 1699.0], [3500.2, 3122.7], [2228.3, 3268.1], [4940.3, 3271.0], [3893.1, 3127.2], [1817.5, 2312.4], [3117.4, 3664.9], [2396.7, 2733.6], [2619.2, 1659.6], [3948.0, 3770.7], [4117.3, 1800.4], [2196.5, 2996.4], [3167.9, 1303.3], [3461.8, 4422.1], [3429.0, 1630.5], [2276.3, 2134.5], [2443.5, 2275.1], [3425.7, 3779.2], [3390.4, 4115.9], [3248.1, 3569.5], [2099.2, 2962.3], [2936.9, 2356.7], [3009.1, 1268.8], [2827.6, 2171.7], [2884.3, 3328.3], [3064.6, 2747.4], [3281.6, 2719.7], [2280.4, 2811.4], [2206.8, 3794.0], [3315.9, 2565.0], [3149.5, 4239.7], [2929.8, 2304.6], [2059.4, 3619.5], [2568.5, 2647.5], [1208.2, 3103.2], [2914.1, 3052.2], [3180.7, 3412.5], [2042.3, 3569.2], [2503.1, 964.6], [4181.9, 4031.1], [4019.2, 2428.6], [1779.9, 2657.6], [3268.1, 5319.9], [4182.5, 2104.0], [3687.8, 1536.1], [3684.6, 2482.0], [2348.8, 3495.8], [1843.5, 2187.0], [2381.9, 2519.5], [3512.0, 2679.6], [3293.1, 1619.6], [4120.1, 2746.9], [1809.4, 2117.5], [1861.9, 2535.8], [4164.4, 2122.1], [3050.0, 3120.0], [2632.4, 2023.3], [2027.6, 3788.5], [2367.4, 1532.5], [4182.3, 3548.0], [1877.7, 2817.4], [3761.1, 3564.1], [2687.8, 4498.0], [3598.4, 2397.1], [2920.9, 2772.9], [3378.7, 999.6], [2571.8, 2516.1], [4628.8, 1310.6], [2167.2, 3232.1], [2885.2, 2678.7], [4785.2, 2396.8], [2697.7, 4143.7], [4384.1, 3569.1], [3220.8, 1928.0], [3103.0, 2189.6], [2505.3, 3204.5], [4064.6, 1783.9], [3661.3, 3444.7], [1845.0, 4844.3], [4150.4, 2915.9], [3231.8, 2395.4], [3887.4, 3272.4], [3550.6, 1791.9], [4586.6, 4412.4], [2294.1, 4735.5], [3063.8, 4832.9], [3181.9, 5695.2], [4290.7, 3800.9], [4087.2, 1941.3], [3333.2, 2434.3], [3902.4, 4627.3], [3154.4, 5168.3], [4423.7, 2520.9], [2513.3, 3229.0], [1791.1, 3172.6], [1823.0, 3950.6], [3195.6, 2171.4], [3085.2, 1820.7], [2977.5, 3107.3], [3068.4, 4899.4], [1650.7, 4550.9], [3195.8, 3417.9], [2875.4, 1302.0], [2309.1, 2906.9], [2754.5, 1881.1], [3314.7, 3649.3], [2176.3, 2959.4], [5077.9, 3506.5], [2585.1, 2834.3], [3288.7, 2450.9], [2645.8, 1994.1], [3049.1, 2319.0], [3196.3, 4468.8], [2982.2, 3444.4], [3854.5, 2039.6], [4267.1, 2545.6], [3724.1, 3843.0], [2291.5, 3087.1], [3840.9, 5887.0], [3354.0, 2810.9], [2143.2, 2641.3], [3240.8, 2687.4], [2296.7, 2788.9], [3641.3, 3141.6], [2310.9, 4244.7], [2331.2, 4172.2], [2706.3, 3833.0], [3524.8, 3212.9], [2666.6, 938.3], [3087.0, 4995.0], [2721.5, 4844.1], [1919.1, 2490.7], [3328.4, 2203.2], [2753.0, 3159.9], [4261.5, 3409.5], [3201.3, 3476.8], [3029.0, 1360.3], [1903.8, 4801.2], [3952.6, 3398.2], [2896.0, 1256.0], [4769.1, 2893.4], [2506.2, 1798.6], [3765.2, 1878.8], [3870.2, 3553.9], [3414.2, 4218.6], [2496.1, 4910.8], [2802.6, 2146.0], [2935.9, 2840.2], [2175.3, 2530.1], [2505.6, 953.0], [2291.2, 3286.5], [1426.3, 2108.2], [4089.2, 2477.7], [3401.0, 2232.3], [3044.9, 2144.7], [3835.6, 2342.1], [4119.3, 3599.6], [2505.8, 2511.6], [2418.0, 4646.1], [2676.0, 3511.6], [3255.8, 3196.7], [3235.7, 3359.0], [3730.5, 2659.6], [1873.3, 1836.7], [3568.8, 3022.0], [4712.8, 3652.5], [3039.1, 4379.5], [3397.4, 4290.1], [4731.9, 2784.7], [3787.4, 4594.3], [3164.3, 2465.4], [3474.5, 3048.2], [2479.9, 4213.9], [2517.2, 3700.5], [1463.2, 2187.2], [1966.2, 2956.5], [1392.2, 3852.2], [4208.6, 3879.3], [2041.3, 4247.7], [3985.0, 3474.2], [4627.8, 2977.7], [3546.1, 3389.2], [3501.9, 3221.0], [3415.9, 4468.3], [3102.5, 3125.1], [1282.3, 2761.1], [1798.1, 2810.5], [3266.4, 2422.0], [2773.5, 4164.3], [3376.8, 369.4], [4386.8, 4897.6], [3051.2, 5694.9], [3348.8, 3811.5], [2846.2, 2148.8], [2766.0, 582.9], [3730.1, 2604.6], [3094.3, 4236.5], [2510.5, 3146.4], [4959.0, 1576.2], [3364.7, 3560.3], [2220.8, 2360.1], [1334.0, 3793.2], [1215.9, 2915.4], [2057.5, 3500.4], [4101.2, 1273.0], [2227.7, 1080.6], [2387.6, 3426.0], [3138.3, 2366.6], [1467.0, 2660.9], [2747.5, 2688.4], [3283.9, 3713.0], [3276.1, 2716.4], [3969.0, 3346.9], [3732.4, 2089.4], [3334.1, 2746.3], [3302.1, 2820.9], [2994.7, 2809.6], [2584.5, 2593.0], [3237.0, 3834.8], [3310.6, 1149.1], [2094.6, 1769.4], [1895.5, 3518.2], [3196.4, 2621.7], [2568.2, 2836.4], [2598.3, 3115.1], [3891.4, 2506.4], [3704.8, 2953.2], [3226.3, 3173.1], [2382.2, 3153.5], [2581.1, 3407.7], [3277.4, 2369.7], [2071.7, 2442.8], [2658.4, 2672.2], [2648.6, 2083.6], [2689.8, 1185.0], [2846.3, 3244.2], [2374.8, 1864.8], [3860.5, 1405.8], [2111.1, 808.1], [2558.8, 2748.3], [4064.4, 3384.7], [2929.5, 3877.9], [3701.0, 4136.1], [4566.5, 2337.7], [1410.8, 2947.9], [1726.4, 5255.4], [1629.0, 3431.8], [2709.0, 2281.7], [2720.9, 3273.4], [2428.8, 4449.0], [2227.5, 3435.3], [3259.1, 3164.8], [1950.6, 3209.8], [3898.5, 1483.1], [2634.1, 1989.4], [3044.4, 2092.9], [977.4, 2999.3], [2323.8, 2357.1], [3148.7, 1794.0], [3206.1, 1821.5], [4157.6, 4758.2], [1993.4, 1825.6], [2523.7, 2046.3], [3842.6, 4239.2], [3601.0, 3987.8], [2728.1, 4901.0], [4087.8, 2701.1], [2291.1, 4274.3], [3410.4, 3583.5], [2483.3, 4920.6], [2662.6, 5586.0], [2986.7, 3219.2], [3188.7, 3671.3], [2086.0, 2357.8], [3137.7, 1214.9], [3697.5, 2680.8], [3384.2, 1260.0], [2596.5, 2646.1], [2799.4, 2922.5], [2742.4, 3168.9], [3065.3, 4791.5], [2986.0, 1913.7], [3025.1, 1209.5], [3194.1, 2469.6], [2043.6, 2575.0], [2781.1, 3570.2], [2774.8, 4884.1], [2640.6, 4694.4], [3379.0, 2638.1], [3131.2, 2459.8], [2530.5, 1804.3], [4940.9, 4407.2], [3498.7, 3344.1], [3631.9, 2994.9], [2946.3, 3854.3], [3705.4, 1858.7], [2588.5, 4283.8], [1943.0, 534.0], [3096.3, 3382.1], [2341.6, 3887.5], [3770.1, 2058.0], [3725.8, 4595.9], [2810.5, 1629.9], [3585.9, 2164.7], [2763.8, 4407.8], [3887.3, 2676.3], [2589.2, 2610.6], [2476.4, 2364.2], [2953.3, 1723.3], [3902.9, 2150.5], [1412.7, 3358.3], [3421.7, 1826.6], [3118.3, 4941.8], [3565.6, 3818.8], [2963.5, 4462.7], [3394.6, 2719.9], [1500.8, 2669.9], [3960.6, 891.1], [2723.9, 1810.6], [3863.1, 1870.8], [2600.8, 2333.3], [2771.9, 4443.3], [3063.8, 3869.2], [2399.2, 2256.7], [3363.7, 3613.7], [2858.5, 3999.7], [2904.9, 3572.9], [1258.6, 1264.4], [3247.3, 2785.8], [2880.5, 1805.3], [2648.1, 4608.0], [3010.3, 2719.1], [3013.5, 2860.9], [3527.1, 3066.1], [3339.9, 3663.8], [3805.0, 3667.3], [2474.6, 2750.7], [2367.5, 2759.9], [3586.0, 4304.9], [3070.4, 2327.2], [2431.8, 3510.6], [1892.3, 1919.5], [3801.1, 2826.9], [2677.9, 3454.3], [2891.4, 3890.1], [4004.2, 3353.7], [3159.5, 1320.1], [2563.4, 2583.2], [2175.9, 3344.0], [4677.7, 3595.1], [2333.5, 2015.0], [2057.3, 3944.7], [2357.6, 3841.2], [2797.7, 5068.7], [3968.1, 916.0], [1520.5, 2723.5], [3416.8, 2116.9], [4438.7, 2331.3], [3037.4, 3189.9], [1766.2, 2061.5], [3370.6, 3291.9], [3341.4, 3759.6], [2195.4, 1119.3], [3929.0, 1898.8], [3636.3, 1569.5], [3215.8, 4110.4], [2179.2, 3578.5], [1932.1, 3252.1], [4308.9, 1593.9], [2261.5, 1019.6], [2332.5, 2393.0], [3832.9, 3312.7], [4987.3, 3897.4], [3163.2, 2277.9], [2838.0, 2837.3], [4044.6, 3435.3], [2807.2, 2224.4], [3992.8, 4113.3], [1829.5, 1663.9], [2865.9, 2732.2], [3824.8, 2583.8], [2105.7, 3679.6], [3891.3, 3935.6], [1782.9, 2393.1], [2562.2, 2388.9], [3236.9, 1732.2], [2704.6, 2311.9], [3286.8, 5126.0], [2364.7, 3333.2], [2217.9, 3738.3], [1553.3, 3733.8], [3488.1, 2856.3], [2426.2, 3817.0], [2291.2, 2475.1], [3521.5, 4539.0], [2460.0, 3033.7], [3069.4, 2736.0], [4223.3, 2750.7], [3896.1, 3864.6], [3635.1, 3884.8], [2032.5, 3879.2], [3205.1, 3340.6], [2897.6, 2955.4], [3525.2, 1767.2], [4167.1, 4145.1], [3196.4, 3766.0], [3472.6, 1899.6], [3659.3, 1689.5], [2491.8, 3680.0], [2732.8, 3440.5], [4377.8, 4258.0], [3361.4, 1844.1], [2842.3, 4881.0], [4406.3, 2911.3], [2105.9, 3532.7], [1570.3, 3772.1], [2802.5, 1789.0], [3889.7, 1827.8], [2540.2, 2276.4], [4159.4, 3396.0], [2639.5, 2378.7], [3576.9, 1746.6], [4090.8, 3636.5], [2595.5, 3392.3], [3830.9, 3595.3], [2769.6, 3674.4], [2590.5, 3005.5], [4131.8, 2691.0], [2545.2, 2635.2], [5131.7, 2899.5], [3100.3, 4472.7], [3093.6, 5308.2], [2005.3, 2794.9], [4057.9, 3471.6], [3661.3, 3040.9], [2551.6, 636.3], [2447.7, 3994.6], [2754.6, 4161.5], [2506.2, 3072.8], [3679.0, 2163.1], [1912.0, 3793.9], [3337.6, 1630.8], [4493.8, 3822.9], [1226.2, 4230.5], [3568.3, 3399.9], [2215.2, 2595.7], [3370.0, 2273.0], [3625.1, 3259.6], [2696.8, 2944.1], [1924.1, 3017.7], [2653.4, 2067.7], [3204.4, 3256.3], [1387.0, 2066.2], [3523.1, 3650.2], [3689.6, 3118.7], [5457.1, 2364.8], [4095.3, 2548.4], [1706.3, 3063.3], [3222.0, 3652.9], [4377.6, 3370.1], [2227.7, 4499.3], [3313.0, 3223.5], [2830.5, 3814.0], [3029.7, 3471.0], [2177.6, 5558.0], [3503.0, 2671.7], [4094.1, 2499.4], [2757.8, 2269.5], [2894.1, 2441.4], [983.6, 4596.4], [1538.2, 4457.0], [1931.7, 1747.9], [2560.9, 3571.9], [3531.4, 2639.2], [1479.1, 2623.1], [3254.6, 2100.1], [2951.3, 2640.0], [3611.7, 4156.1], [2804.5, 3315.5], [4133.3, 3720.4], [3429.5, 2319.0], [4534.3, 3935.6], [2224.5, 3793.1], [5477.4, 3220.6], [2623.6, 3235.7], [3099.8, 3175.5], [2913.0, 3778.2], [3494.1, 2291.5], [2692.8, 5206.3], [2869.3, 3651.6], [2969.5, 5017.9], [3986.4, 2856.6], [2752.5, 2604.0], [1862.7, 3452.7], [3181.1, 1680.5], [2422.2, 2752.5], [2391.8, 3761.1], [3554.8, 2797.0], [2787.6, 1938.7], [1835.8, 3081.1], [2584.1, 3543.8], [1793.5, 2763.1], [3604.9, 1589.6], [1419.0, 2693.0], [3329.8, 3677.6], [3679.6, 4427.0], [3123.1, 3940.5], [3975.5, 1989.0], [2718.5, 4686.1], [2177.6, 3731.6], [1542.0, 2788.9], [3305.7, 3263.8], [2564.3, 3826.8], [2536.7, 2161.7], [3172.5, 1976.5], [3992.8, 3817.8], [4231.1, 2376.8], [2581.2, 3605.0], [3211.1, 2621.1], [3222.7, 1597.7], [3364.0, 2858.8], [3869.2, 2765.6], [2179.1, 4901.5], [3057.3, 2768.0], [3509.9, 2965.9], [3096.3, 3904.1], [2313.1, 2366.4], [1362.3, 2113.5], [2963.9, 3566.3], [3291.1, 3273.3], [3443.4, 3678.6], [2736.9, 3285.1], [2132.4, 1170.3], [3668.8, 2347.6], [3368.6, 3097.3], [3717.4, 3284.1], [4401.1, 3834.6], [1768.3, 2496.2], [3034.9, 5235.2], [4575.7, 2126.6], [3031.6, 3233.3], [2605.9, 3382.2], [2090.9, 3675.9], [3314.3, 3941.9], [3415.5, 2292.4], [4325.1, 3436.5], [3037.7, 3656.8], [2680.8, 1999.2], [4145.5, 2766.4], [1894.8, 2598.0], [4648.7, 3642.1], [2851.4, 641.7], [3758.7, 2974.6], [2607.0, 1247.7], [2148.8, 2574.1], [4121.8, 2459.7], [3104.4, 2791.8], [2688.7, 3185.9], [2350.3, 3486.2], [3092.0, 3845.4], [3882.5, 3100.2], [3232.5, 2844.8], [1182.3, 5080.3], [2515.9, 5078.2], [2040.6, 3257.3], [3001.7, 2318.1], [1995.1, 3897.9], [898.7, 2403.2], [3050.5, 2358.4], [1748.7, 3064.9], [2166.9, 2241.1], [3574.3, 3667.1], [3041.1, 2459.6], [3150.9, 3222.4], [3496.8, 1833.4], [2427.7, 3423.7], [4239.1, 2827.3], [1439.9, 4169.3], [4187.6, 3774.6], [3563.0, 2284.4], [2192.6, 3801.3], [3583.0, 4824.3], [2837.5, 4128.2], [3435.0, 2695.7], [2508.6, 4405.2], [3831.8, 1386.5], [3373.1, 3282.7], [3175.9, 1357.0], [3155.1, 2134.1], [3996.9, 1110.0], [2564.5, 2810.9], [3984.4, 3152.3], [4226.2, 3031.6], [3226.6, 3433.8], [2546.4, 4703.4], [2698.6, 4209.9], [2201.8, 3244.0], [2243.6, 3013.4], [3951.4, 2164.3], [3099.8, 2438.4], [2045.0, 1365.0], [3303.9, 5064.9], [4350.6, 3528.0], [2899.1, 1548.8], [2251.7, 2464.0], [3394.4, 2537.5], [4047.2, 5229.2], [3898.2, 2514.6], [2544.9, 3116.9], [1335.8, 2262.4], [3837.7, 4270.9], [3930.4, 2962.4], [3565.7, 3072.5], [2227.5, 2714.5], [2468.0, 3238.9], [2854.1, 1976.7], [4014.7, 3902.2], [3976.0, 3074.4], [3266.1, 4392.5], [3119.9, 2296.7], [4166.0, 2579.1], [3992.3, 2404.7], [2738.9, 2086.4], [3928.8, 2519.1], [2934.0, 3892.9], [2099.3, 2788.8], [2296.7, 3417.4], [3008.1, 3521.9], [3469.2, 3152.4], [3033.1, 1977.2], [1764.1, 3710.5], [3157.0, 1870.4], [3275.3, 3117.5], [4267.0, 4044.1], [2901.9, 2655.0], [4617.8, 1174.2], [2245.1, 3491.4], [4002.5, 4111.0], [4483.1, 2775.8], [4138.1, 1947.1], [3094.9, 3934.1], [4512.6, 3240.0], [2277.4, 2858.5], [3141.8, 4479.4], [1784.1, 3201.6], [2540.9, 3749.3], [3580.7, 4100.9], [3727.1, 4704.3], [3295.1, 2262.8], [1934.3, 3203.9], [4485.3, 3129.6], [1724.7, 4504.6], [2029.0, 1925.2], [3419.9, 2517.4], [2735.1, 3731.5], [3006.6, 3834.3], [1889.8, 3108.1], [2691.7, 2722.1], [3228.2, 4824.0], [2060.9, 3415.2], [2529.0, 4155.6], [2417.6, 567.0], [4701.8, 3958.8], [2396.0, 4332.0], [2964.3, 4421.7], [3935.0, 4276.9], [2721.4, 4475.2], [2473.5, 3649.7], [2909.1, 3621.2], [3008.6, 3274.8], [3682.4, 3726.5], [2675.4, 3057.0], [3394.0, 3970.1], [2616.4, 2673.8], [3401.6, 1888.3], [2785.7, 3148.4], [1930.9, 2654.8], [3877.4, 3373.0], [2556.9, 3689.4], [3710.1, 5390.8], [1892.5, 3329.9], [2921.7, 2880.4], [3293.6, 2823.4], [3356.0, 3250.7], [3583.9, 1913.7], [3161.4, 3868.7], [2532.4, 1850.8], [1365.0, 1647.7], [2503.6, 4416.5], [3209.3, 3681.2], [2347.2, 3943.4], [2822.9, 2882.3], [4280.9, 3605.8], [1382.4, 2760.8], [3686.9, 3974.7], [2473.5, 1253.5], [2401.4, 3895.4], [2032.0, 3885.1], [1797.8, 2845.8], [2001.1, 2412.4], [2456.5, 2400.9], [3865.3, 3229.9], [977.6, 4142.5], [2757.5, 3711.3], [1679.7, 4021.5], [3104.3, 1876.4], [3302.1, 3734.9], [3270.9, 2982.2], [3044.6, 1629.3], [1208.5, 3629.3], [1236.4, 403.7], [2818.6, 2815.1], [603.8, 3942.2], [3633.9, 4291.6], [2442.1, 1208.3], [2507.1, 3040.8], [2174.5, 1912.5], [3347.5, 2171.8], [3393.3, 2455.2], [3563.5, 3220.8], [1606.6, 3271.4], [2814.9, 2287.4], [2463.9, 2812.7], [4584.0, 3047.8], [3067.5, 3305.8], [1507.3, 2829.7], [3783.2, 2397.5], [2018.8, 2366.0], [2951.5, 2792.2], [4676.9, 3104.4], [2077.1, 4764.7], [3726.3, 47.4], [3388.5, 3493.8], [4190.2, 423.4], [3838.2, 5326.5], [3659.9, 2817.8], [2606.9, 3128.5], [4247.8, 4104.1], [3199.8, 4302.2], [2442.4, 2657.3], [3912.8, 2848.3], [2744.4, 5220.6], [2712.0, 3331.7], [4117.2, 3593.1], [3637.8, 1554.5], [3982.7, 5453.7], [2025.9, 3491.3], [3291.3, 4520.0], [1997.6, 2913.9], [2036.7, 3892.2], [3092.5, 2650.1], [3341.2, 2344.6], [2881.2, 2130.7], [4614.5, 1676.0], [3953.0, 1451.2], [3683.5, 4302.4], [3224.5, 3356.1], [3875.7, 3758.3], [3884.3, 3273.5], [2427.0, 1723.5], [3753.8, 2102.6], [2656.3, 1342.3], [1953.0, 1178.0], [2373.4, 2643.1], [2080.6, 2267.4]]}, "grandAvg": 2361.46};
-const S = D.shows, C = D.corr;
-const fm = n => n.toLocaleString('en-US',{maximumFractionDigits:0});
-const f2 = n => (Math.abs(n)<0.005 ? '' : n>0 ? '' : '\u2212') + Math.abs(n).toFixed(2);
-const f3 = n => (n>=0?'':'−') + Math.abs(n).toFixed(3);
-const el = id => document.getElementById(id);
-
-/* ---- diverging colour: teal (neg) -> neutral -> netflix red (pos) ---- */
-function heatColor(r){
-  const t = Math.min(1, Math.abs(r));
-  const e = Math.pow(t, 0.55);                 // lift weak values out of the floor
-  const base=[38,38,38];
-  const end = r>=0 ? [229,9,20] : [0,194,168];
-  const c = base.map((b,i)=>Math.round(b+(end[i]-b)*e));
-  return `rgb(${c[0]},${c[1]},${c[2]})`;
-}
-const textOn = r => Math.abs(r)>0.45 ? '#fff' : '#9a9a9a';
-/* colour for a number printed on a dark surface: keeps weak values legible */
-function valColor(r){
-  const t=Math.min(1,Math.abs(r)), e=0.35+0.65*Math.pow(t,0.5);
-  const base=[150,150,150], end = r>=0 ? [255,107,115] : [0,194,168];
-  const c=base.map((b,i)=>Math.round(b+(end[i]-b)*e));
-  return `rgb(${c[0]},${c[1]},${c[2]})`;
-}
-
-/* ---- KPIs ---- */
-let pairs=[];
-for(let i=0;i<S.length;i++) for(let j=i+1;j<S.length;j++) pairs.push({a:S[i],b:S[j],r:C[i][j]});
-pairs.sort((x,y)=>y.r-x.r);
-const strong = pairs.filter(p=>p.r>0.8);
-el('kpis').innerHTML = [
-  [fm(D.nClean),'Rows analysed'],
-  [fm(D.nSubs),'Subscribers'],
-  [S.length,'Titles'],
-  [strong.length,'Strong pairs (r &gt; 0.8)']
-].map(([v,l])=>`<div class="kpi"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('');
-el('nsub2').textContent = fm(D.nSubs);
-el('nsub3').textContent = fm(D.nSubs);
-el('footN').textContent = `${fm(D.nClean)} cleaned rows · ${fm(D.nSubs)} subscribers · ${S.length} titles`;
-
-/* ---- recommender ---- */
-let sel = 'Stranger Things';
-el('picker').innerHTML = S.map(s=>`<button class="chip" data-s="${s}">${s}</button>`).join('');
-el('picker').addEventListener('click', e=>{
-  const b = e.target.closest('.chip'); if(b) render(b.dataset.s);
-});
-
-function render(show){
-  sel = show; const i = S.indexOf(show);
-  document.querySelectorAll('#picker .chip').forEach(c=>c.setAttribute('aria-pressed', c.dataset.s===show));
-  const d = D.desc.find(x=>x.show===show);
-  el('seed').innerHTML = `<div class="k">Now watching</div><div class="n">${show}</div>
-    <dl><dt>Avg watch time</dt><dd>${fm(d.avg)} min</dd>
-        <dt>Avg episodes</dt><dd>${d.avgEp}</dd>
-        <dt>Episode length</dt><dd>${d.epLen} min</dd>
-        <dt>Subscribers</dt><dd>${fm(d.viewers)}</dd></dl>`;
-
-  const list = S.map((s,j)=>({s, r:C[i][j], j})).filter(x=>x.j!==i).sort((a,b)=>b.r-a.r);
-  el('recs').innerHTML = list.map((x,k)=>{
-    const strongP = x.r>0.8, w = Math.min(50, Math.abs(x.r)*50);
-    const bar = `<i style="${x.r>=0?`left:50%;width:${w}%`:`right:50%;left:auto;width:${w}%`};background:${heatColor(x.r)}"></i>`;
-    const why = strongP ? 'Watch time rises almost in step — strong recommendation'
-              : x.r>0.3 ? 'Some shared audience behaviour'
-              : Math.abs(x.r)<0.06 ? 'No measurable relationship'
-              : x.r<0 ? 'Slight inverse pull — audiences lean apart' : 'Weak signal';
-    return `<div class="rec ${k===0&&strongP?'top':''}">
-      <div class="rank">${k+1}</div>
-      <div class="body"><div class="nm">${x.s}</div><div class="why">${why}</div></div>
-      <div class="bar">${bar}</div>
-      <div class="val" style="color:${valColor(x.r)}">${f3(x.r)}</div>
-      <span class="verdict ${strongP?'v-strong':'v-none'}">${strongP?'RECOMMEND':'SKIP'}</span></div>`;
-  }).join('');
-
-  const fam = list.filter(x=>x.r>0.8).map(x=>x.s);
-  el('seedExtra').innerHTML = fam.length
-    ? `<div class="eyebrow" style="margin-bottom:6px">Viewing cluster</div>
-       <p style="font-size:12.5px;color:var(--tx2);margin:0 0 10px">“${show}” sits in a cluster of
-          ${fam.length+1} titles whose watch time rises and falls together.</p>
-       ${[show,...fam].map(f=>`<span class="pill ${f===show?'red':''}">${f}</span>`).join('')}
-       <p style="font-size:12px;color:var(--tx3);margin:10px 0 0">Promote within the cluster; everything else
-          scores as noise.</p>`
-    : `<div class="eyebrow" style="margin-bottom:6px">Viewing cluster</div>
-       <p style="font-size:12.5px;color:var(--tx2);margin:0">“${show}” belongs to no cluster — no other title
-          clears r&nbsp;&gt;&nbsp;0.8 against it. Fall back to the average-watch-time ranking below.</p>`;
-
-  const best = list[0];
-  el('recfoot').textContent = best.r>0.8
-    ? `Recommend “${best.s}” to ${show} viewers — r = ${f3(best.r)} across ${fm(D.nSubs)} subscribers.`
-    : `No title clears the r > 0.8 bar for “${show}”; fall back to popularity-based promotion.`;
-
-  document.querySelectorAll('#heat tr').forEach(tr=>tr.classList.toggle('hi', tr.dataset.s===show));
-}
-
-/* ---- heatmap ---- */
 (function(){
-  let h = '<thead><tr><th></th>' + S.map(s=>`<th class="colh"><div>${s}</div></th>`).join('') + '</tr></thead><tbody>';
-  S.forEach((rs,i)=>{
-    h += `<tr data-s="${rs}"><th class="rowh"><button class="chip" style="background:none;border:0;padding:0;color:inherit;font:inherit;cursor:pointer" data-s="${rs}">${rs}</button></th>`;
-    S.forEach((cs,j)=>{
-      const r = C[i][j];
-      h += i===j ? `<td class="diag" title="${rs}">1.00</td>`
-        : `<td style="background:${heatColor(r)};color:${textOn(r)}" title="${rs} vs ${cs}: r = ${r.toFixed(4)}">${f2(r)}</td>`;
-    });
-    h += '</tr>';
+"use strict";
+const D=JSON.parse(document.getElementById("nfdata").textContent);
+const SHOWS=D.shows, NS=SHOWS.length, N=D.n;
+
+/* ---- decode fixed-width base36 pivot ---- */
+const A36="0123456789abcdefghijklmnopqrstuvwxyz";
+const V=new Int32Array(N*NS);
+(function(){const e=D.enc;for(let k=0;k<N*NS;k++){const o=k*3;
+  V[k]=A36.indexOf(e[o])*1296+A36.indexOf(e[o+1])*36+A36.indexOf(e[o+2]);}})();
+const cell=(r,c)=>V[r*NS+c];
+
+const $=id=>document.getElementById(id);
+const fm=n=>Math.round(n).toLocaleString("en-US");
+const f2=n=>(Math.abs(n)<0.005?"":n>0?"":"−")+Math.abs(n).toFixed(2);
+const f3=n=>(Math.abs(n)<0.0005?"":n>0?"":"−")+Math.abs(n).toFixed(3);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const short=(s,n=17)=>s.length>n?s.slice(0,n-1).trimEnd()+"…":s;
+const ALL=Array.from({length:NS},(_,i)=>i);
+const STRONG=0.8;
+
+const ST={seed:Math.max(0,SHOWS.indexOf("Stranger Things")),seg:null,measure:"avg",
+          scx:Math.max(0,SHOWS.indexOf("Dark")),scy:Math.max(0,SHOWS.indexOf("Stranger Things")),
+          recAll:false,showRest:false};
+
+let ROWS=[];
+const MEAN=new Float64Array(NS),SD=new Float64Array(NS),TOT=new Float64Array(NS);
+let C=[],KPI=null;
+
+function computeAll(){
+  ROWS=[];for(let r=0;r<N;r++) if(ST.seg===null||D.seg[r]===ST.seg) ROWS.push(r);
+  const n=ROWS.length||1;
+  for(let c=0;c<NS;c++){let s=0;for(const r of ROWS)s+=cell(r,c);
+    const m=s/n;MEAN[c]=m;TOT[c]=s;
+    let q=0;for(const r of ROWS){const d=cell(r,c)-m;q+=d*d;}SD[c]=Math.sqrt(q);}
+  C=ALL.map(()=>new Array(NS).fill(0));
+  for(let i=0;i<NS;i++){C[i][i]=1;
+    for(let j=i+1;j<NS;j++){
+      let num=0;const ma=MEAN[i],mb=MEAN[j];
+      for(const r of ROWS)num+=(cell(r,i)-ma)*(cell(r,j)-mb);
+      const d=SD[i]*SD[j],v=d?num/d:0;C[i][j]=v;C[j][i]=v;}}
+  const pairs=[];
+  for(let i=0;i<NS;i++)for(let j=i+1;j<NS;j++)pairs.push({a:i,b:j,r:C[i][j]});
+  pairs.sort((x,y)=>y.r-x.r);
+  const strong=pairs.filter(p=>p.r>STRONG);
+  const cl=[];
+  strong.forEach(p=>{
+    const hit=cl.filter(c=>c.has(p.a)||c.has(p.b));
+    if(!hit.length)cl.push(new Set([p.a,p.b]));
+    else{const m=hit[0];hit.slice(1).forEach(o=>{o.forEach(x=>m.add(x));cl.splice(cl.indexOf(o),1);});
+      m.add(p.a);m.add(p.b);}
   });
-  el('heat').innerHTML = h + '</tbody>';
-  el('heat').addEventListener('click', e=>{ const b=e.target.closest('[data-s]'); if(b&&b.dataset.s) render(b.dataset.s); });
-})();
-
-/* ---- descriptive tables ---- */
-function descTable(node, full){
-  const cols = full
-    ? [['show','Show',0],['avg','Avg',1],['median','Median',1],['sd','Std dev',1],['min','Min',1],['max','Max',1],['viewers','Subscribers',1]]
-    : [['show','Show',0],['avg','Avg watch time (min)',1],['avgEp','Avg episodes',1],['epLen','Ep length (min)',1],['viewers','Subscribers',1]];
-  node.innerHTML = '<thead><tr>'+cols.map(c=>`<th class="${c[2]?'num':''}">${c[1]}</th>`).join('')+'</tr></thead><tbody>'
-    + D.desc.map(d=>'<tr>'+cols.map(c=>`<td class="${c[2]?'num':''}">${c[2]?fm(d[c[0]]):d[c[0]]}</td>`).join('')+'</tr>').join('')
-    + `<tr style="font-weight:700"><td>Grand total</td><td class="num">${fm(D.grandAvg)}</td>`
-    + '<td class="num" colspan="'+(cols.length-2)+'"></td></tr></tbody>';
+  KPI={pairs,strong,clusters:cl};
 }
-descTable(el('descT'), false);
-descTable(el('descT2'), true);
-el('grandAvg').textContent = fm(D.grandAvg);
 
-/* ---- page 2 tables ---- */
-el('cleanPills').innerHTML =
-  `<span class="pill">${fm(D.nRows)} raw rows</span>
-   <span class="pill red">− ${fm(D.issues.blank)} incomplete rows removed</span>
-   <span class="pill tl">${fm(D.nClean)} rows kept</span>
-   <span class="pill">${fm(D.nSubs)} subscribers × ${S.length} shows</span>`;
+const band=r=>{const a=Math.abs(r);return a<0.05?0:a<0.2?1:a<0.4?2:a<0.6?3:a<STRONG?4:5;};
+const bandVar=r=>{const b=band(r);return b===0?"var(--seq-0)":`var(--${r>=0?"pos":"neg"}-${b})`;};
 
-el('rawT').innerHTML = '<thead><tr><th>Subscriber ID</th><th>Show Name</th><th class="num">Episodes Watched</th>'
-  + '<th class="num">Episode Length (m)</th><th class="num">Total Watch Time</th></tr></thead><tbody>'
-  + D.rawHead.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td class="num">${r[2].toFixed(2)}</td>`
-      +`<td class="num">${r[3]}</td><td class="num" style="color:var(--accent)">${fm(r[4])}</td></tr>`).join('')
-  + '</tbody>';
+/* ---- tooltip ---- */
+const tip=$("tip");
+function showTip(e,title,rows){
+  tip.innerHTML=`<div class="tt">${esc(title)}</div>`+rows.map(r=>`<div class="tr">${r}</div>`).join("");
+  tip.dataset.show="true";
+  const b=tip.getBoundingClientRect();
+  let x=e.clientX+14,y=e.clientY+14;
+  if(x+b.width>innerWidth-8)x=e.clientX-b.width-14;
+  if(y+b.height>innerHeight-8)y=e.clientY-b.height-14;
+  tip.style.left=Math.max(6,x)+"px";tip.style.top=Math.max(6,y)+"px";
+}
+const hideTip=()=>{tip.dataset.show="false";};
+addEventListener("scroll",hideTip,{passive:true});
 
-el('pivT').innerHTML = '<thead><tr><th>Subscriber</th>'+S.map(s=>`<th class="num">${s}</th>`).join('')+'</tr></thead><tbody>'
-  + D.pivotHead.map(r=>'<tr><td>'+r[0]+'</td>'+r.slice(1).map(v=>`<td class="num">${fm(v)}</td>`).join('')+'</tr>').join('')
-  + '</tbody>';
+function box(svg){const p=svg.parentElement.getBoundingClientRect();
+  const w=Math.max(240,Math.round(p.width)),h=Math.max(190,Math.round(p.height));
+  svg.setAttribute("viewBox",`0 0 ${w} ${h}`);return{w,h};}
 
-const pairTable = (node, rows) => node.innerHTML =
-  '<thead><tr><th>Pair</th><th class="num">r</th></tr></thead><tbody>'
-  + rows.map(p=>`<tr><td>${p.a} <span style="color:var(--tx3)">&amp;</span> ${p.b}</td>`
-      + `<td class="num" style="color:${valColor(p.r)};font-weight:700">${f3(p.r)}</td></tr>`).join('')
-  + '</tbody>';
-pairTable(el('strongT'), strong);
-pairTable(el('weakT'), pairs.slice().sort((a,b)=>Math.abs(a.r)-Math.abs(b.r)).slice(0,strong.length||5));
+/* ================= HERO ================= */
+function renderPicker(){
+  $("picker").innerHTML=ALL.map(i=>
+    `<button type="button" class="pchip" data-seed="${i}" aria-pressed="${i===ST.seed}">${esc(SHOWS[i])}</button>`).join("");
+}
+function renderHero(){
+  const i=ST.seed;
+  $("seedCard").innerHTML=`<div class="k">Now watching</div><div class="n">${esc(SHOWS[i])}</div>
+    <dl><dt>Avg watch time</dt><dd>${fm(MEAN[i])} min</dd>
+        <dt>Avg episodes</dt><dd>${D.epavg[i]}</dd>
+        <dt>Episode length</dt><dd>${D.eplen[i]} min</dd>
+        <dt>Subscribers</dt><dd>${fm(ROWS.length)}</dd></dl>`;
 
-/* ---- scatter plots ---- */
-function scatter(id, sp){
-  const W=520,H=400,L=62,R=16,T=34,B=52;
-  const xs=sp.pts.map(p=>p[0]), ys=sp.pts.map(p=>p[1]);
-  const nice = v => { const p=Math.pow(10,Math.floor(Math.log10(v))); return Math.ceil(v/p)*p; };
-  const xM=nice(Math.max(...xs)), yM=nice(Math.max(...ys));
-  const px=v=>L+(v/xM)*(W-L-R), py=v=>H-B-(v/yM)*(H-T-B);
-  let g='';
+  const list=ALL.filter(c=>c!==i).map(c=>({c,r:C[i][c]})).sort((a,b)=>b.r-a.r);
+  const good=list.filter(x=>x.r>STRONG), rest=list.filter(x=>x.r<=STRONG);
+
+  $("reclbl").innerHTML=good.length
+    ? `Recommend next &mdash; <b>${good.length} strong match${good.length>1?"es":""}</b>`
+    : "No strong match";
+  $("recCards").innerHTML=good.length
+    ? good.map((x,k)=>`<button type="button" class="recCard" data-seed="${x.c}">
+        <span class="rank">Match ${k+1}</span>
+        <span class="nm">${esc(SHOWS[x.c])}</span>
+        <span class="r">${f3(x.r)}</span>
+        <span class="meter"><i style="width:${(Math.min(1,x.r)*100).toFixed(0)}%"></i></span>
+        <span class="why">Watch time rises almost in step &mdash; ${fm(MEAN[x.c])} min average</span></button>`).join("")
+    : `<div class="recNone">Nothing correlates with <strong>${esc(SHOWS[i])}</strong> above r&nbsp;=&nbsp;${STRONG.toFixed(2)}
+       in this audience. Promote it on popularity instead &mdash; the watch-time ranking below shows where it sits.</div>`;
+
+  const names=rest.map(x=>`${esc(SHOWS[x.c])} <b>${f3(x.r)}</b>`);
+  $("recRest").innerHTML=rest.length
+    ? `<b>No measurable relationship</b> with the remaining ${rest.length}: `
+      +(ST.showRest?names.join(" &middot; ")+` <button type="button" data-rest="0">show less</button>`
+        :names.slice(0,3).join(" &middot; ")
+          +(names.length>3?` <button type="button" data-rest="1">and ${names.length-3} more</button>`:""))
+      +` &mdash; each sits within noise of zero, so neither title predicts the other.`
+    : "";
+}
+$("picker").addEventListener("click",e=>{const b=e.target.closest("[data-seed]");if(b){ST.seed=+b.dataset.seed;render();}});
+$("recCards").addEventListener("click",e=>{const b=e.target.closest("[data-seed]");if(b){ST.seed=+b.dataset.seed;render();
+  document.querySelector(".hero").scrollIntoView({behavior:"smooth",block:"start"});}});
+$("recRest").addEventListener("click",e=>{const b=e.target.closest("[data-rest]");
+  if(b){ST.showRest=b.dataset.rest==="1";renderHero();}});
+
+/* ================= KPIs ================= */
+function renderKpis(){
+  const avg=ALL.reduce((t,c)=>t+MEAN[c],0)/NS;
+  const best=KPI.pairs[0];
+  [["Subscribers",fm(ROWS.length),ST.seg===null?"all segments":D.segNames[ST.seg]],
+   ["Titles",NS,"in the catalogue"],
+   ["Pairs compared",KPI.pairs.length,"unique combinations"],
+   ["Strong pairs",KPI.strong.length,"r above 0.80"],
+   ["Clusters",KPI.clusters.length,KPI.clusters.length?"groups of linked titles":"none found"],
+   ["Strongest pair",f3(best.r),`${short(SHOWS[best.a],12)} + ${short(SHOWS[best.b],12)}`]]
+  .forEach((k,idx,arr)=>{if(idx===0)$("kpis").innerHTML=arr.map(([l,v,s])=>
+    `<div class="kpi"><dt>${l}</dt><dd style="margin:0"><span class="val">${v}</span><span class="sub">${esc(s)}</span></dd></div>`).join("");});
+}
+
+/* ================= heatmap ================= */
+function renderHeat(){
+  let h='<thead><tr><th></th>'+ALL.map(c=>`<th class="colh" scope="col"><div>${esc(SHOWS[c])}</div></th>`).join("")+'</tr></thead><tbody>';
+  ALL.forEach(i=>{
+    h+=`<tr><th class="rowh" scope="row"><button type="button" data-seed="${i}" aria-pressed="${i===ST.seed}">${esc(SHOWS[i])}</button></th>`;
+    ALL.forEach(j=>{const r=C[i][j];
+      h+= i===j?`<td class="diag">1.00</td>`
+        :`<td class="b${band(r)}" style="background:${bandVar(r)}" data-i="${i}" data-j="${j}">${f2(r)}</td>`;});
+    h+="</tr>";
+  });
+  $("heat").innerHTML=h+"</tbody>";
+  $("hmlegend").innerHTML='<span>Inverse</span>'
+    +[5,4,3,2,1].map(b=>`<span class="lgi"><span class="sw" style="background:var(--neg-${b})"></span></span>`).join("")
+    +'<span class="lgi"><span class="sw" style="background:var(--seq-0)"></span>none</span>'
+    +[1,2,3,4,5].map(b=>`<span class="lgi"><span class="sw" style="background:var(--pos-${b})"></span></span>`).join("")
+    +'<span>Move together</span>';
+}
+$("heat").addEventListener("click",e=>{const b=e.target.closest("[data-seed]");if(b){ST.seed=+b.dataset.seed;render();}});
+$("heat").addEventListener("mousemove",e=>{
+  const td=e.target.closest("td[data-i]");if(!td)return hideTip();
+  const i=+td.dataset.i,j=+td.dataset.j,r=C[i][j];
+  showTip(e,`${SHOWS[i]} × ${SHOWS[j]}`,
+    [`r = ${f3(r)}`,band(r)>=5?"Strong — recommend":band(r)===0?"No relationship":"Weak signal",
+     `${fm(ROWS.length)} subscribers`]);
+});
+$("heat").addEventListener("mouseleave",hideTip);
+
+/* ================= ranked bars ================= */
+function renderRank(){
+  const svg=$("c-rec");
+  $("rankname").textContent=SHOWS[ST.seed];
+  const list=ALL.filter(c=>c!==ST.seed).map(c=>({c,r:C[ST.seed][c]})).sort((a,b)=>b.r-a.r);
+  const {w,h}=box(svg);
+  const L=128,R=54,T=8,B=20;
+  const bh=Math.min(32,(h-T-B)/list.length),gap=Math.max(3,bh*0.24),span=w-L-R;
+  const mxPos=Math.max(0,...list.map(x=>x.r)),mxNeg=Math.max(0,...list.map(x=>-x.r));
+  const negFrac=mxNeg>0?Math.max(0.1,Math.min(0.4,mxNeg/(mxNeg+mxPos||1))):0;
+  const zero=L+span*negFrac,peak=Math.max(mxPos,mxNeg)||1;
+  const sc=v=>Math.abs(v)/peak*(v>=0?span*(1-negFrac):span*negFrac);
+  let out=`<line class="axis" x1="${zero.toFixed(1)}" y1="${T}" x2="${zero.toFixed(1)}" y2="${(T+list.length*bh).toFixed(1)}"/>`;
+  list.forEach((x,k)=>{
+    const y=T+k*bh,bw=sc(x.r),xx=x.r>=0?zero:zero-bw;
+    out+=`<g class="item" tabindex="0" data-c="${x.c}">
+      <rect x="${xx.toFixed(1)}" y="${(y+gap/2).toFixed(1)}" width="${Math.max(1.5,bw).toFixed(1)}" height="${(bh-gap).toFixed(1)}" rx="3" fill="${bandVar(x.r)}"/>
+      <text class="cat" x="${L-9}" y="${(y+bh/2+4).toFixed(1)}" text-anchor="end">${esc(short(SHOWS[x.c]))}</text>
+      <text class="val" x="${w-6}" y="${(y+bh/2+4).toFixed(1)}" text-anchor="end">${f3(x.r)}</text>
+      <rect class="hit" x="0" y="${y.toFixed(1)}" width="${w}" height="${bh.toFixed(1)}"/></g>`;
+  });
+  svg.innerHTML=out;
+  svg.setAttribute("aria-label",`Titles ranked by correlation with ${SHOWS[ST.seed]}`);
+  $("tbl-rec").innerHTML='<table class="dt"><thead><tr><th>Title</th><th>r</th><th>Verdict</th></tr></thead><tbody>'
+    +list.map(x=>`<tr><td><button class="rowbtn" data-seed="${x.c}" aria-pressed="false">${esc(SHOWS[x.c])}</button></td>`
+      +`<td style="color:${x.r>STRONG?"var(--mark)":"inherit"};font-weight:${x.r>STRONG?700:400}">${f3(x.r)}</td>`
+      +`<td>${x.r>STRONG?"Recommend":"Skip"}</td></tr>`).join("")+"</tbody></table>";
+}
+$("c-rec").addEventListener("mousemove",e=>{
+  const g=e.target.closest("g.item");if(!g)return hideTip();
+  const c=+g.dataset.c,r=C[ST.seed][c];
+  showTip(e,SHOWS[c],[`r with ${SHOWS[ST.seed]} = ${f3(r)}`,`avg ${fm(MEAN[c])} min`,r>STRONG?"Recommend":"Skip"]);
+});
+$("c-rec").addEventListener("mouseleave",hideTip);
+$("c-rec").addEventListener("click",e=>{const g=e.target.closest("g.item");if(g){ST.seed=+g.dataset.c;render();}});
+$("tbl-rec").addEventListener("click",e=>{const b=e.target.closest("[data-seed]");if(b){ST.seed=+b.dataset.seed;render();}});
+
+/* ================= scatter ================= */
+function renderScatter(){
+  const svg=$("c-sc"),empty=svg.parentElement.querySelector(".empty"),ax=ST.scx,ay=ST.scy;
+  if(!ROWS.length){svg.innerHTML="";empty.hidden=false;$("sccap").textContent="";return;}
+  empty.hidden=true;
+  const {w,h}=box(svg),L=56,R=14,T=12,B=44;
+  const nice=v=>{const p=Math.pow(10,Math.floor(Math.log10(v||1)));return Math.ceil(v/p)*p;};
+  let xM=0,yM=0;for(const r of ROWS){if(cell(r,ax)>xM)xM=cell(r,ax);if(cell(r,ay)>yM)yM=cell(r,ay);}
+  xM=nice(xM)||1;yM=nice(yM)||1;
+  const px=v=>L+v/xM*(w-L-R),py=v=>h-B-v/yM*(h-T-B);
+  let g="";
   for(let k=0;k<=4;k++){
-    const gy=H-B-k*(H-T-B)/4, gx=L+k*(W-L-R)/4;
-    g+=`<line x1="${L}" y1="${gy}" x2="${W-R}" y2="${gy}" stroke="#262626" stroke-width="1"/>`
-     + `<line x1="${gx}" y1="${T}" x2="${gx}" y2="${H-B}" stroke="#1c1c1c" stroke-width="1"/>`
-     + `<text x="${L-8}" y="${gy+4}" fill="#7A7A7A" font-size="10" text-anchor="end">${fm(yM*k/4)}</text>`
-     + `<text x="${gx}" y="${H-B+16}" fill="#7A7A7A" font-size="10" text-anchor="middle">${fm(xM*k/4)}</text>`;
-  }
-  const dots = sp.pts.map(p=>`<circle cx="${px(p[0]).toFixed(1)}" cy="${py(p[1]).toFixed(1)}" r="1.9"/>`).join('');
-  // least-squares trend line
-  const n=xs.length, mx=xs.reduce((a,b)=>a+b)/n, my=ys.reduce((a,b)=>a+b)/n;
-  let num=0,den=0; for(let k=0;k<n;k++){num+=(xs[k]-mx)*(ys[k]-my);den+=(xs[k]-mx)**2;}
-  const m=num/den, c=my-m*mx;
-  const y0=Math.max(0,Math.min(yM,c)), y1=Math.max(0,Math.min(yM,m*xM+c));
-  const x0=(y0-c)/m, x1=(y1-c)/m;
-  const strongP = Math.abs(sp.r)>0.5;
-  el(id).innerHTML = `
-    <rect width="${W}" height="${H}" fill="#0d0d0d"/>
-    ${g}
-    <g fill="${strongP?'rgba(229,9,20,.55)':'rgba(0,194,168,.45)'}">${dots}</g>
-    <line x1="${px(x0)}" y1="${py(y0)}" x2="${px(x1)}" y2="${py(y1)}"
-          stroke="#fff" stroke-width="1.6" stroke-dasharray="5 4" opacity=".75"/>
-    <text x="${L}" y="20" fill="#F5F5F5" font-size="12.5" font-weight="700">${sp.y} vs ${sp.x}</text>
-    <text x="${W-R}" y="20" fill="${strongP?'#FF6B73':'#00C2A8'}" font-size="12.5" font-weight="700"
-          text-anchor="end">r = ${f3(sp.r)}</text>
-    <text x="${(L+W-R)/2}" y="${H-12}" fill="#7A7A7A" font-size="10.5" text-anchor="middle">${sp.x} — total watch time (min)</text>
-    <text transform="translate(15 ${(T+H-B)/2}) rotate(-90)" fill="#7A7A7A" font-size="10.5" text-anchor="middle">${sp.y} (min)</text>`;
+    const gy=h-B-k*(h-T-B)/4,gx=L+k*(w-L-R)/4;
+    g+=`<line class="grid" x1="${L}" y1="${gy}" x2="${w-R}" y2="${gy}"/>`
+      +`<line class="grid" x1="${gx}" y1="${T}" x2="${gx}" y2="${h-B}"/>`
+      +`<text x="${L-7}" y="${gy+4}" text-anchor="end">${fm(yM*k/4)}</text>`
+      +`<text x="${gx}" y="${h-B+15}" text-anchor="middle">${fm(xM*k/4)}</text>`;}
+  const step=Math.max(1,Math.ceil(ROWS.length/1200));
+  let dots="";
+  for(let k=0;k<ROWS.length;k+=step){const r=ROWS[k];
+    dots+=`<circle cx="${px(cell(r,ax)).toFixed(1)}" cy="${py(cell(r,ay)).toFixed(1)}" r="1.9"/>`;}
+  const rr=C[ax][ay],mx=MEAN[ax],my=MEAN[ay];
+  let num=0,den=0;for(const r of ROWS){const d=cell(r,ax)-mx;num+=d*(cell(r,ay)-my);den+=d*d;}
+  const m=den?num/den:0,b0=my-m*mx;
+  const y0=Math.max(0,Math.min(yM,b0)),y1=Math.max(0,Math.min(yM,m*xM+b0));
+  const tx0=m?(y0-b0)/m:0, tx1=m?(y1-b0)/m:xM;
+  svg.innerHTML=g+`<g fill="${band(rr)>=4?"var(--mark)":"var(--neg-4)"}" opacity=".5">${dots}</g>`
+    +`<line class="trend" x1="${px(tx0).toFixed(1)}" y1="${py(y0).toFixed(1)}" x2="${px(tx1).toFixed(1)}" y2="${py(y1).toFixed(1)}"/>`
+    +`<text class="xlab" x="${((L+w-R)/2).toFixed(1)}" y="${h-8}" text-anchor="middle">${esc(SHOWS[ax])} — minutes</text>`
+    +`<text class="xlab" transform="translate(13 ${((T+h-B)/2).toFixed(1)}) rotate(-90)" text-anchor="middle">${esc(SHOWS[ay])} — minutes</text>`;
+  svg.setAttribute("aria-label",`Scatter of ${SHOWS[ay]} against ${SHOWS[ax]}, r equals ${f3(rr)}`);
+  $("sccap").innerHTML=`<strong style="color:var(--text-2)">r = ${f3(rr)}</strong> &mdash; `
+    +(band(rr)>=5?"a clear upward band: the pair moves together, so the recommendation holds."
+     :band(rr)===0?"a shapeless cloud: no relationship, so neither title predicts the other."
+     :"a weak tendency only — not enough to recommend on.")
+    +` ${fm(ROWS.length)} subscribers${step>1?`, every ${step}th point drawn`:""}.`;
 }
-scatter('sc1', D.scatterA);
-scatter('sc2', D.scatterB);
 
-/* ---- conclusion ---- */
-const clusters = [];
-const seen = new Set();
-strong.forEach(p=>{
-  let hit = clusters.find(c=>c.has(p.a)||c.has(p.b));
-  if(!hit){ hit=new Set(); clusters.push(hit); }
-  hit.add(p.a); hit.add(p.b); seen.add(p.a); seen.add(p.b);
+/* ================= watch time ================= */
+function renderWatch(){
+  const svg=$("c-watch");
+  const val=c=>ST.measure==="avg"?MEAN[c]:TOT[c];
+  const list=ALL.map(c=>({c,v:val(c)})).sort((a,b)=>b.v-a.v);
+  const {w,h}=box(svg),L=128,R=58,T=6,B=14;
+  const bh=Math.min(32,(h-T-B)/list.length),gap=Math.max(3,bh*0.24);
+  const mx=Math.max(1,...list.map(x=>x.v)),span=w-L-R;
+  let out="";
+  list.forEach((x,k)=>{const y=T+k*bh,bw=x.v/mx*span;
+    out+=`<g class="item" tabindex="0" data-c="${x.c}">
+      <rect x="${L}" y="${(y+gap/2).toFixed(1)}" width="${Math.max(1.5,bw).toFixed(1)}" height="${(bh-gap).toFixed(1)}" rx="3" fill="${x.c===ST.seed?"var(--brand)":"var(--mark-dim)"}"/>
+      <text class="cat" x="${L-8}" y="${(y+bh/2+4).toFixed(1)}" text-anchor="end">${esc(short(SHOWS[x.c]))}</text>
+      <text class="val" x="${(L+bw+6).toFixed(1)}" y="${(y+bh/2+4).toFixed(1)}">${fm(x.v)}</text>
+      <rect class="hit" x="0" y="${y.toFixed(1)}" width="${w}" height="${bh.toFixed(1)}"/></g>`;});
+  svg.innerHTML=out;
+  svg.setAttribute("aria-label",`${ST.measure==="avg"?"Average":"Total"} watch time by title`);
+  $("tbl-watch").innerHTML='<table class="dt"><thead><tr><th>Title</th><th>Avg</th><th>Total</th><th>Episodes</th><th>Ep length</th></tr></thead><tbody>'
+    +list.map(x=>`<tr><td><button class="rowbtn" data-seed="${x.c}" aria-pressed="${x.c===ST.seed}">${esc(SHOWS[x.c])}</button></td>`
+      +`<td>${fm(MEAN[x.c])}</td><td>${fm(TOT[x.c])}</td><td>${D.epavg[x.c]}</td><td>${D.eplen[x.c]}</td></tr>`).join("")+"</tbody></table>";
+}
+$("c-watch").addEventListener("mousemove",e=>{
+  const g=e.target.closest("g.item");if(!g)return hideTip();
+  const c=+g.dataset.c;
+  showTip(e,SHOWS[c],[`avg ${fm(MEAN[c])} min`,`total ${fm(TOT[c])} min`,`${D.epavg[c]} episodes × ${D.eplen[c]} min`]);
 });
-el('conclusion').innerHTML =
-  `<p>Of the ${pairs.length} possible show pairs, <strong>${strong.length}</strong> clear the r &gt; 0.8 threshold.
-   They fall into <strong>${clusters.length}</strong> distinct viewing ${clusters.length===1?'cluster':'clusters'}:</p>`
-  + clusters.map((c,k)=>`<p><span class="pill red">Cluster ${k+1}</span> ${[...c].join(' · ')}</p>`).join('')
-  + `<p>Everything outside these clusters sits within roughly ±0.05 of zero — indistinguishable from
-     no relationship at this sample size. The practical rule: recommend <em>within</em> a cluster, and fall back to
-     the average-watch-time ranking for the ${S.length-seen.size} title${S.length-seen.size===1?'':'s'} that belong to none.</p>`;
+$("c-watch").addEventListener("mouseleave",hideTip);
+$("c-watch").addEventListener("click",e=>{const g=e.target.closest("g.item");if(g){ST.seed=+g.dataset.c;render();}});
+$("tbl-watch").addEventListener("click",e=>{const b=e.target.closest("[data-seed]");if(b){ST.seed=+b.dataset.seed;render();}});
 
-/* ---- nav ---- */
-document.querySelector('nav').addEventListener('click', e=>{
-  const b=e.target.closest('button'); if(!b) return;
-  document.querySelectorAll('nav button').forEach(x=>x.setAttribute('aria-selected', x===b));
-  document.querySelectorAll('.page').forEach(p=>p.classList.toggle('on', p.id===b.dataset.page));
-  window.scrollTo({top:0,behavior:'smooth'});
+/* ================= records ================= */
+function renderRecords(){
+  const lim=ST.recAll?ROWS.length:50,show=ROWS.slice(0,lim);
+  $("rectbl").innerHTML='<thead><tr><th>Subscriber</th>'+ALL.map(c=>`<th>${esc(short(SHOWS[c],14))}</th>`).join("")
+    +'<th>Total</th></tr></thead><tbody>'
+    +show.map(r=>{const t=ALL.reduce((a,c)=>a+cell(r,c),0);
+      return `<tr><td>${r+1}</td>`+ALL.map(c=>`<td>${fm(cell(r,c))}</td>`).join("")
+        +`<td style="font-weight:600;color:#fff">${fm(t)}</td></tr>`;}).join("")+"</tbody>";
+  $("recfoot").textContent=`Showing ${fm(show.length)} of ${fm(ROWS.length)} subscribers`
+    +(ST.seg!==null?` in the ${D.segNames[ST.seg].toLowerCase().replace(" viewers","")} segment`:"")+".";
+  $("recmore").textContent=ST.recAll?"Show first 50":"Show all";
+  $("recmore").hidden=ROWS.length<=50;
+}
+$("recmore").addEventListener("click",()=>{ST.recAll=!ST.recAll;renderRecords();});
+
+/* ================= pairs + method ================= */
+function renderPairs(){
+  $("tbl-pairs").innerHTML='<table class="dt"><caption>All pairs, strongest first. '
+    +`${KPI.strong.length} of ${KPI.pairs.length} clear r &gt; 0.80.</caption>`
+    +'<thead><tr><th>Pair</th><th>r</th><th>Reading</th></tr></thead><tbody>'
+    +KPI.pairs.map(p=>`<tr><td>${esc(SHOWS[p.a])} &amp; ${esc(SHOWS[p.b])}</td>`
+      +`<td style="color:${p.r>STRONG?"var(--mark)":"inherit"};font-weight:${p.r>STRONG?700:400}">${f3(p.r)}</td>`
+      +`<td>${p.r>STRONG?"Strong":band(p.r)===0?"No relationship":"Weak"}</td></tr>`).join("")+"</tbody></table>";
+}
+function renderMethod(){
+  $("cleanPills").innerHTML=`<span class="mpill">${fm(D.nRaw)} raw rows</span>`
+    +`<span class="mpill">− ${fm(D.dropped)} incomplete removed</span>`
+    +`<span class="mpill">${fm(D.nClean)} kept</span>`
+    +`<span class="mpill">${fm(N)} subscribers × ${NS} titles</span>`;
+  $("rawT").innerHTML='<thead><tr><th>Subscriber ID</th><th>Show Name</th><th>Episodes Watched</th>'
+    +'<th>Episode Length (m)</th><th>Total Watch Time</th></tr></thead><tbody>'
+    +ALL.map(c=>`<tr><td>1</td><td>${esc(SHOWS[c])}</td><td>${(cell(0,c)/D.eplen[c]).toFixed(2)}</td>`
+      +`<td>${D.eplen[c]}</td><td style="color:var(--mark);font-weight:600">${fm(cell(0,c))}</td></tr>`).join("")+"</tbody>";
+  $("pivT").innerHTML='<thead><tr><th>Subscriber</th>'+ALL.map(c=>`<th>${esc(short(SHOWS[c],14))}</th>`).join("")+"</tr></thead><tbody>"
+    +ROWS.slice(0,10).map(r=>`<tr><td>${r+1}</td>`+ALL.map(c=>`<td>${fm(cell(r,c))}</td>`).join("")+"</tr>").join("")+"</tbody>";
+  const pt=(node,rows,cap)=>node.innerHTML=`<caption>${cap}</caption><thead><tr><th>Pair</th><th>r</th></tr></thead><tbody>`
+    +rows.map(p=>`<tr><td>${esc(SHOWS[p.a])} &amp; ${esc(SHOWS[p.b])}</td>`
+      +`<td style="color:${Math.abs(p.r)>STRONG?"var(--mark)":"inherit"};font-weight:${Math.abs(p.r)>STRONG?700:400}">${f3(p.r)}</td></tr>`).join("")+"</tbody>";
+  pt($("strongT"),KPI.strong,"Strong pairs (r &gt; 0.80)");
+  pt($("weakT"),KPI.pairs.slice().sort((a,b)=>Math.abs(a.r)-Math.abs(b.r)).slice(0,Math.max(5,KPI.strong.length)),
+     "Weakest pairs (no relationship)");
+  const desc=ALL.map(c=>({c,m:MEAN[c]})).sort((a,b)=>b.m-a.m);
+  $("descT").innerHTML='<thead><tr><th>Title</th><th>Average of Total Watch Time</th><th>Total</th></tr></thead><tbody>'
+    +desc.map(d=>`<tr><td>${esc(SHOWS[d.c])}</td><td>${fm(d.m)}</td><td>${fm(TOT[d.c])}</td></tr>`).join("")
+    +`<tr style="font-weight:700"><td>Grand total</td><td>${fm(desc.reduce((t,d)=>t+d.m,0)/NS)}</td><td></td></tr></tbody>`;
+  const best=KPI.pairs[0];
+  $("methodScatters").innerHTML=`<p style="font-size:13px;color:var(--text-2)">The strongest pair in this audience is
+    <strong>${esc(SHOWS[best.a])}</strong> and <strong>${esc(SHOWS[best.b])}</strong> at r = ${f3(best.r)}.
+    Set the Pair scatter axes to that pair on the Dashboard tab to see it plotted.</p>`;
+  $("conclusion").innerHTML=
+    `<p>Of the ${KPI.pairs.length} possible pairs, <strong>${KPI.strong.length}</strong> clear the r &gt; 0.80
+     threshold. They fall into <strong>${KPI.clusters.length}</strong> viewing
+     ${KPI.clusters.length===1?"cluster":"clusters"}:</p>`
+    +KPI.clusters.map((c,i)=>`<p><span class="mpill" style="border-color:var(--mark);color:var(--mark)">Cluster ${i+1}</span> `
+      +[...c].map(x=>esc(SHOWS[x])).join(" · ")+"</p>").join("")
+    +`<p>Everything outside these clusters sits within roughly &plusmn;0.05 of zero &mdash; indistinguishable from no
+      relationship at this sample size. The practical rule: recommend <em>within</em> a cluster, and fall back to the
+      average-watch-time ranking for titles that belong to none.</p>`;
+}
+
+/* ================= chrome ================= */
+$("segbtns").addEventListener("click",e=>{
+  const b=e.target.closest("button");if(!b)return;
+  ST.seg=b.dataset.seg===""?null:+b.dataset.seg;
+  [...$("segbtns").children].forEach(x=>x.setAttribute("aria-pressed",String(x===b)));
+  ST.recAll=false;render();
 });
+document.querySelectorAll("[data-tbl]").forEach(b=>b.addEventListener("click",()=>{
+  const w=$("tbl-"+b.dataset.tbl),open=w.hidden;
+  w.hidden=!open;b.setAttribute("aria-expanded",String(open));
+  b.textContent=(open?"Hide ":"Show ")+(b.dataset.tbl==="pairs"?"pairs":"table");
+}));
+document.querySelectorAll("#card-watch .seg button").forEach(b=>b.addEventListener("click",()=>{
+  ST.measure=b.dataset.measure;
+  document.querySelectorAll("#card-watch .seg button").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));
+  renderWatch();}));
+document.querySelector(".viewtabs").addEventListener("click",e=>{
+  const b=e.target.closest("button");if(!b)return;
+  document.querySelectorAll(".viewtabs button").forEach(x=>x.setAttribute("aria-selected",String(x===b)));
+  $("v-dash").hidden=b.dataset.view!=="dash";
+  $("v-method").hidden=b.dataset.view!=="method";
+  if(b.dataset.view==="dash")requestAnimationFrame(drawCharts);
+  scrollTo({top:0,behavior:"smooth"});});
+["scx","scy"].forEach(id=>$(id).addEventListener("change",()=>{ST[id]=+$(id).value;renderScatter();}));
+let rt;addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(drawCharts,150);});
 
-render(sel);
+function fillSelects(){
+  const opt=(v,cur)=>`<option value="${v}"${v===cur?" selected":""}>${esc(SHOWS[v])}</option>`;
+  $("scx").innerHTML=ALL.map(v=>opt(v,ST.scx)).join("");
+  $("scy").innerHTML=ALL.map(v=>opt(v,ST.scy)).join("");
+}
+function drawCharts(){if(!$("v-dash").hidden){renderRank();renderScatter();renderWatch();}}
+
+function render(){
+  computeAll();
+  renderPicker();renderHero();renderKpis();renderHeat();
+  fillSelects();drawCharts();renderRecords();renderPairs();renderMethod();
+}
+render();
+requestAnimationFrame(drawCharts);
+})();
 
 </script>
 </body>
